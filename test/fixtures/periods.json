@@ -1,0 +1,24 @@
+{
+ "periods": [
+  {
+   "periodCode": "Q1",
+   "periodPos": 1,
+   "periodDesc": "Quadrimestre",
+   "periodLabel": "1° Quadrimestre",
+   "isFinal": false,
+   "dateStart": "2026-09-01",
+   "dateEnd": "2027-01-31",
+   "miurDivisionCode": null
+  },
+  {
+   "periodCode": "Q3",
+   "periodPos": 3,
+   "periodDesc": "Quadrimestre",
+   "periodLabel": "2° Quadrimestre",
+   "isFinal": true,
+   "dateStart": "2027-02-01",
+   "dateEnd": "2027-06-30",
+   "miurDivisionCode": null
+  }
+ ]
+}

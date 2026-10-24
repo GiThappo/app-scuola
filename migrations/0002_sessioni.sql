@@ -1,0 +1,3 @@
+CREATE TABLE sessioni (token TEXT PRIMARY KEY, scade TEXT NOT NULL);
+
+CREATE TABLE tentativi_login (minuto TEXT PRIMARY KEY, n INTEGER NOT NULL);

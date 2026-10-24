@@ -1,0 +1,16 @@
+{
+ "id": 1234567,
+ "account_type": "S",
+ "sede_codice": "XX0000",
+ "anno_scol": "2026",
+ "cognome": "ROSSI",
+ "nome": "MARIO",
+ "classe_ident": "3XINF",
+ "classe_desc": "3XINF",
+ "data_nascita": "2010-01-01",
+ "codice_fisc": "RSSMRA10A01H501X",
+ "login_type": "S",
+ "last_login_at": null,
+ "email": null,
+ "schoolpass": null
+}

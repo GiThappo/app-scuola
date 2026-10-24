@@ -1,0 +1,114 @@
+{
+ "calendar": [
+  {
+   "dayDate": "2026-10-23",
+   "dayOfWeek": 6,
+   "dayStatus": "SD"
+  },
+  {
+   "dayDate": "2026-10-24",
+   "dayOfWeek": 7,
+   "dayStatus": "SD"
+  },
+  {
+   "dayDate": "2026-10-25",
+   "dayOfWeek": 1,
+   "dayStatus": "NW"
+  },
+  {
+   "dayDate": "2026-10-26",
+   "dayOfWeek": 2,
+   "dayStatus": "SD"
+  },
+  {
+   "dayDate": "2026-10-27",
+   "dayOfWeek": 3,
+   "dayStatus": "SD"
+  },
+  {
+   "dayDate": "2026-10-28",
+   "dayOfWeek": 4,
+   "dayStatus": "SD"
+  },
+  {
+   "dayDate": "2026-10-29",
+   "dayOfWeek": 5,
+   "dayStatus": "SD"
+  },
+  {
+   "dayDate": "2026-10-30",
+   "dayOfWeek": 6,
+   "dayStatus": "SD"
+  },
+  {
+   "dayDate": "2026-10-31",
+   "dayOfWeek": 7,
+   "dayStatus": "SD"
+  },
+  {
+   "dayDate": "2026-11-01",
+   "dayOfWeek": 1,
+   "dayStatus": "NW"
+  },
+  {
+   "dayDate": "2026-11-02",
+   "dayOfWeek": 2,
+   "dayStatus": "SD"
+  },
+  {
+   "dayDate": "2026-11-03",
+   "dayOfWeek": 3,
+   "dayStatus": "SD"
+  },
+  {
+   "dayDate": "2026-11-04",
+   "dayOfWeek": 4,
+   "dayStatus": "SD"
+  },
+  {
+   "dayDate": "2026-11-05",
+   "dayOfWeek": 5,
+   "dayStatus": "SD"
+  },
+  {
+   "dayDate": "2026-11-06",
+   "dayOfWeek": 6,
+   "dayStatus": "SD"
+  },
+  {
+   "dayDate": "2026-11-07",
+   "dayOfWeek": 7,
+   "dayStatus": "SD"
+  },
+  {
+   "dayDate": "2026-11-08",
+   "dayOfWeek": 1,
+   "dayStatus": "NW"
+  },
+  {
+   "dayDate": "2026-11-09",
+   "dayOfWeek": 2,
+   "dayStatus": "SD"
+  },
+  {
+   "dayDate": "2026-11-10",
+   "dayOfWeek": 3,
+   "dayStatus": "SD"
+  },
+  {
+   "dayDate": "2026-11-11",
+   "dayOfWeek": 4,
+   "dayStatus": "SD"
+  },
+  {
+   "dayDate": "2026-11-12",
+   "dayOfWeek": 5,
+   "dayStatus": "SD"
+  },
+  {
+   "dayDate": "2026-11-13",
+   "dayOfWeek": 6,
+   "dayStatus": "SD"
+  }
+ ]
+}

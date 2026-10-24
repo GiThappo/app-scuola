@@ -1,0 +1,196 @@
+{
+ "subjects": [
+  {
+   "id": 407068,
+   "description": "EDUCAZIONE CIVICA",
+   "order": 19,
+   "teachers": [
+    {
+     "teacherId": "A4428230",
+     "teacherName": "Prof. A"
+    },
+    {
+     "teacherId": "A369218",
+     "teacherName": "Prof. B"
+    },
+    {
+     "teacherId": "A4874862",
+     "teacherName": "Prof. C"
+    },
+    {
+     "teacherId": "A7534251",
+     "teacherName": "Prof. D"
+    },
+    {
+     "teacherId": "A5300076",
+     "teacherName": "Prof. E"
+    },
+    {
+     "teacherId": "A6156029",
+     "teacherName": "Prof. F"
+    },
+    {
+     "teacherId": "A6440840",
+     "teacherName": "Prof. G"
+    },
+    {
+     "teacherId": "A6156941",
+     "teacherName": "Prof. H"
+    },
+    {
+     "teacherId": "A7014996",
+     "teacherName": "Prof. I"
+    },
+    {
+     "teacherId": "A3464285",
+     "teacherName": "Prof. J"
+    }
+   ]
+  },
+  {
+   "id": 219479,
+   "description": "INFORMATICA",
+   "order": 28,
+   "teachers": [
+    {
+     "teacherId": "A6440789",
+     "teacherName": "Prof. K"
+    },
+    {
+     "teacherId": "A6156029",
+     "teacherName": "Prof. F"
+    }
+   ]
+  },
+  {
+   "id": 219504,
+   "description": "LINGUA E LETTERATURA ITALIANA",
+   "order": 48,
+   "teachers": [
+    {
+     "teacherId": "A4428230",
+     "teacherName": "Prof. A"
+    }
+   ]
+  },
+  {
+   "id": 216838,
+   "description": "LINGUA INGLESE",
+   "order": 50,
+   "teachers": [
+    {
+     "teacherId": "A369218",
+     "teacherName": "Prof. B"
+    }
+   ]
+  },
+  {
+   "id": 5,
+   "description": "SOSTEGNO",
+   "order": 50,
+   "teachers": [
+    {
+     "teacherId": "A4474733",
+     "teacherName": "Prof. L"
+    },
+    {
+     "teacherId": "A7074779",
+     "teacherName": "Prof. M"
+    },
+    {
+     "teacherId": "A7097344",
+     "teacherName": "Prof. N"
+    }
+   ]
+  },
+  {
+   "id": 219471,
+   "description": "MATEMATICA E COMPLEMENTI DI MATEMATICA",
+   "order": 55,
+   "teachers": [
+    {
+     "teacherId": "A3464285",
+     "teacherName": "Prof. J"
+    }
+   ]
+  },
+  {
+   "id": 216840,
+   "description": "RELIGIONE CATTOLICA  O ATTIVITA' ALTERNATIVE",
+   "order": 58,
+   "teachers": [
+    {
+     "teacherId": "A7014996",
+     "teacherName": "Prof. I"
+    }
+   ]
+  },
+  {
+   "id": 216834,
+   "description": "SCIENZE MOTORIE E SPORTIVE",
+   "order": 72,
+   "teachers": [
+    {
+     "teacherId": "A6440840",
+     "teacherName": "Prof. G"
+    }
+   ]
+  },
+  {
+   "id": 219477,
+   "description": "SISTEMI E RETI",
+   "order": 81,
+   "teachers": [
+    {
+     "teacherId": "A6156941",
+     "teacherName": "Prof. H"
+    },
+    {
+     "teacherId": "A369190",
+     "teacherName": "Prof. O"
+    }
+   ]
+  },
+  {
+   "id": 219485,
+   "description": "STORIA",
+   "order": 85,
+   "teachers": [
+    {
+     "teacherId": "A5300076",
+     "teacherName": "Prof. E"
+    }
+   ]
+  },
+  {
+   "id": 219476,
+   "description": "TECNOLOGIE E PROGETTAZIONE DI SISTEMI INFORMATICI E DI TELECOMUNICAZIONI",
+   "order": 89,
+   "teachers": [
+    {
+     "teacherId": "A7534251",
+     "teacherName": "Prof. D"
+    },
+    {
+     "teacherId": "A7525592",
+     "teacherName": "Prof. P"
+    }
+   ]
+  },
+  {
+   "id": 219478,
+   "description": "TELECOMUNICAZIONI",
+   "order": 94,
+   "teachers": [
+    {
+     "teacherId": "A3822779",
+     "teacherName": "Prof. Q"
+    },
+    {
+     "teacherId": "A4874862",
+     "teacherName": "Prof. C"
+    }
+   ]
+  }
+ ]
+}

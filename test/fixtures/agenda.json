@@ -1,0 +1,56 @@
+{
+ "agenda": [
+  {
+   "evtId": 2910271,
+   "evtCode": "AGNT",
+   "evtDatetimeBegin": "2026-10-17T12:15:00+02:00",
+   "evtDatetimeEnd": "2026-10-17T13:15:00+02:00",
+   "isFullDay": false,
+   "notes": "Verifica scritta di matematica: disequazioni di primo e secondo grado, studio del segno del prodotto, disequazioni fratte, disequazioni di grado superiore al secondo, disequazioni binomie e trinomie, sistemi di disequazioni, equazione con il valore assoluto (metodo algebrico e grafico)",
+   "authorName": "Prof. J",
+   "classDesc": "3XINF INFORMATICA",
+   "subjectId": null,
+   "subjectDesc": null,
+   "homeworkId": null
+  },
+  {
+   "evtId": 3000331,
+   "evtCode": "AGNT",
+   "evtDatetimeBegin": "2026-10-22T08:15:00+02:00",
+   "evtDatetimeEnd": "2026-10-22T09:15:00+02:00",
+   "isFullDay": false,
+   "notes": "Studiare la teoria a pag. 17, 18, es. pag. 58 n 612, 613, 616, 620, 621, 627, 630, 631, 632",
+   "authorName": "Prof. J",
+   "classDesc": "3XINF INFORMATICA",
+   "subjectId": null,
+   "subjectDesc": null,
+   "homeworkId": null
+  },
+  {
+   "evtId": 3005866,
+   "evtCode": "AGNT",
+   "evtDatetimeBegin": "2026-10-22T00:00:00+02:00",
+   "evtDatetimeEnd": "2026-10-22T23:59:59+02:00",
+   "isFullDay": true,
+   "notes": "VERIFICA SCRITTA. STUDIARE DAL LIBRO DI TESTO DA PAG. 2 A PAG. 85 + I NOTEBOOKLM ASSEGNATI SU CLASSROOM",
+   "authorName": "Prof. F",
+   "classDesc": "3XINF INFORMATICA",
+   "subjectId": null,
+   "subjectDesc": null,
+   "homeworkId": null
+  },
+  {
+   "evtId": 3027455,
+   "evtCode": "AGNT",
+   "evtDatetimeBegin": "2026-10-23T08:15:00+02:00",
+   "evtDatetimeEnd": "2026-10-23T09:15:00+02:00",
+   "isFullDay": false,
+   "notes": "Es. pag. 59 n 632, 633, 635, 638, 641, 642, 643, 644, 646, 647, 649",
+   "authorName": "Prof. J",
+   "classDesc": "3XINF INFORMATICA",
+   "subjectId": null,
+   "subjectDesc": null,
+   "homeworkId": null
+  }
+ ]
+}

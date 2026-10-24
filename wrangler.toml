@@ -1,0 +1,25 @@
+name = "app-scuola"
+main = "src/index.ts"
+compatibility_date = "2026-09-01"
+preview_urls = false
+
+[assets]
+directory = "public"
+binding = "ASSETS"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "app-scuola"
+database_id = "METTI-QUI-IL-TUO-DATABASE-ID"
+migrations_dir = "migrations"
+
+[triggers]
+crons = ["0 5-19 * * *"]
+
+[[durable_objects.bindings]]
+name = "AGGIORNATORE"
+class_name = "Aggiornatore"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Aggiornatore"]
