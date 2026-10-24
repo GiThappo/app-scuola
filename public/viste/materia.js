@@ -1,7 +1,19 @@
 import { api, esc } from "../app.js";
-import { etichettaGiorno } from "../formato.js";
+import { classeMedia, etichettaGiorno } from "../formato.js";
+import { dentroApp, titoloFile, urlFile } from "./file.js";
 
 const data = (d) => d.split("-").reverse().slice(0, 2).join("/");
+const peso = (n) => (n < 1e6 ? `${Math.max(1, Math.round(n / 1e3))} kB` : `${(n / 1e6).toFixed(1).replace(".", ",")} MB`);
+
+function voceFile(f) {
+  const est = f.nome.split(".").pop().toUpperCase();
+  return dentroApp(f)
+    ? `<a class="voce" href="#/file/${encodeURIComponent(f.percorso)}"><span class="tipo-file">${f.nome.endsWith(".md") ? "MD" : "TXT"}</span><div class="corpo">${esc(titoloFile(f.nome))}</div></a>`
+    : `<a class="voce" href="${urlFile(f.percorso)}" target="_blank" rel="noopener">
+        <span class="tipo-file ${esc(est)}">${esc(est)}</span><div class="corpo">${esc(f.nome.replace(/\.[^.]+$/, ""))}<div class="nota">${esc(est)} · ${peso(f.dimensione)}</div></div></a>`;
+}
+
+const SEZIONI = [["schede", "Schede"], ["fonti", "PDF e fonti"], ["appunti", "Appunti"]];
 
 export async function vistaMateria(el, nome) {
   const m = await api(`/api/materie/${encodeURIComponent(nome)}`);
@@ -24,10 +36,13 @@ export async function vistaMateria(el, nome) {
           <div class="${l.argomento ? "" : "nota"}">${esc(l.argomento || "argomento non scritto")}</div></div></div>`).join("")
     : `<p class="vuoto">Nessuna lezione nelle ultime settimane.</p>`;
 
+  const materiale = SEZIONI.filter(([k]) => m.materiale[k].length)
+    .map(([k, titolo]) => `<h2>${titolo}</h2><div class="lista">${m.materiale[k].map(voceFile).join("")}</div>`).join("");
+
   el.innerHTML = `
     <div class="testa">
       <h1><a href="#/materie" aria-label="Indietro">‹</a> ${esc(m.nome)}</h1>
-      <span class="media ${m.media != null && m.media < 6 ? "basso" : ""}">media ${m.media == null ? "—" : m.media.toFixed(2).replace(".", ",")}</span>
+      <span class="media ${classeMedia(m.media)}">media ${m.media == null ? "—" : m.media.toFixed(2).replace(".", ",")}</span>
     </div>
-    <h2>Voti</h2>${voti}${inArrivo}<h2>Diario lezioni</h2>${lezioni}`;
+    <h2>Voti</h2>${voti}${inArrivo}${materiale}<h2>Diario lezioni</h2>${lezioni}`;
 }

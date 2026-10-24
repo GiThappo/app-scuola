@@ -12,5 +12,6 @@ export const INTESTAZIONI: Record<string, string> = {
 
 export const intestazioniSicurezza: MiddlewareHandler = async (c, next) => {
   await next();
-  for (const [k, v] of Object.entries(INTESTAZIONI)) c.res.headers.set(k, v);
+  // Una rotta può avere la sua CSP (i file del materiale): le altre intestazioni valgono sempre
+  for (const [k, v] of Object.entries(INTESTAZIONI)) if (!(k === "Content-Security-Policy" && c.res.headers.has(k))) c.res.headers.set(k, v);
 };

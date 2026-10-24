@@ -13,7 +13,7 @@ const titolo = (oggi) => {
 function voce(v, oggi) {
   const scadenza = v.dedotta && v.scadenza ? `<div class="nota">per ${esc(etichettaGiorno(v.scadenza, oggi).toLowerCase())} · prossima lezione</div>` : "";
   return `
-    <div class="voce">
+    <div class="voce tipo-${esc(v.tipo)}">
       <span class="tag ${esc(v.tipo)}">${esc(ETICHETTE[v.tipo] ?? v.tipo)}</span>
       <div class="corpo">
         <b class="${v.nuova ? "nuovo" : ""}">${esc(v.materie.join(" / ") || "Materia?")}</b>

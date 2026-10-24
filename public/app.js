@@ -3,6 +3,8 @@ import { vistaAgenda } from "./viste/agenda.js";
 import { vistaMaterie } from "./viste/materie.js";
 import { vistaMateria } from "./viste/materia.js";
 import { vistaStudio } from "./viste/studio.js";
+import { vistaFile } from "./viste/file.js";
+import { vistaRecap } from "./viste/recap.js";
 
 const contenuto = document.getElementById("contenuto");
 const barra = document.getElementById("barra");
@@ -23,12 +25,15 @@ export const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&a
 
 export async function mostra() {
   const [sezione, ...resto] = location.hash.replace(/^#\/?/, "").split("/");
-  for (const a of barra.querySelectorAll("a")) a.classList.toggle("attiva", a.dataset.sezione === (sezione || "agenda"));
+  const attiva = sezione === "file" ? "materie" : sezione || "agenda";
+  for (const a of barra.querySelectorAll("a")) a.classList.toggle("attiva", a.dataset.sezione === attiva);
   try {
     barra.hidden = false;
     if (sezione === "materie" && resto.length) await vistaMateria(contenuto, decodeURIComponent(resto.join("/")));
     else if (sezione === "materie") await vistaMaterie(contenuto);
+    else if (sezione === "file") await vistaFile(contenuto, decodeURIComponent(resto.join("/")));
     else if (sezione === "studio") await vistaStudio(contenuto);
+    else if (sezione === "recap") await vistaRecap(contenuto, resto[0]);
     else await vistaAgenda(contenuto);
   } catch (e) {
     if (e instanceof NonLoggato) {

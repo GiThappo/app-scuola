@@ -4,7 +4,8 @@ Web app per il telefono che prende voti, agenda e lezioni da **Classeviva** e or
 
 - **Agenda**: compiti, verifiche e interrogazioni dei prossimi 30 giorni, con la scadenza dei compiti calcolata sulla prossima lezione. Le verifiche che i prof non scrivono sul registro le aggiungi tu con **＋ Verifica**.
 - **Studio**: piano di studio automatico intorno ai tuoi impegni. I blocchi si possono spostare, segnare come fatti o eliminare.
-- **Materie**: voti, medie e diario delle lezioni.
+- **Materie**: voti, medie, diario delle lezioni e il tuo materiale di studio (schede, PDF, appunti).
+- **Recap**: il resoconto di ogni giorno scritto dal tutor, con quelli dei giorni prima.
 - **Google Calendar** (facoltativo): il piano finisce nel tuo calendario e i tuoi impegni entrano nel piano.
 
 Questo repo è un **modello**: non contiene l'app di nessuno. Segui le istruzioni e crei la tua, nel tuo account, con i tuoi dati.
@@ -106,6 +107,28 @@ Uno script nel tuo account Google, ogni 5 minuti, manda all'app gli **orari** de
 5. Nell'editor scegli la funzione **`installa`** e premi **Esegui**. Google ti chiede i permessi: concedili (è il tuo script, nel tuo account). Da qui in poi gira da solo.
 
 Nella scheda Studio dell'app vedi quando c'è stata l'ultima sincronizzazione.
+
+### 7. Materiale e recap dal PC (facoltativo)
+
+Schede, PDF e recap del giorno li scrive sul PC il [tutor](https://github.com/GiThappo/tutor-scolastico) (o li metti tu) in una cartella così:
+
+```
+~/Scuola/
+  app.env                                 APP_URL=https://app-scuola.<sottodominio>.workers.dev
+                                          APP_DIR=<cartella di questo repo>
+  materiale/<Materia>/schede/*.md         schede di studio (si leggono dentro l'app)
+  materiale/<Materia>/fonti/*.pdf         PDF e altre fonti (si aprono nel browser del telefono)
+  materiale/<Materia>/appunti/*           appunti (txt, md, foto)
+  report/AAAA-MM-GG.txt                   recap del giorno
+```
+
+Per caricarli nell'app:
+
+```bash
+node scripts/carica-materiale.mjs            # usa ~/Scuola; --prova per vedere cosa farebbe
+```
+
+Carica solo i file nuovi o cambiati e toglie dall'app quelli che hai cancellato dal PC. Ti chiede la password dell'app, a meno che non sia in `APP_PASSWORD` o nel file `.password-app` di questo repo (fuori da git). Le skill del tutor lo lanciano da sole se `app.env` ha `APP_DIR`.
 
 ## Come si aggiorna
 

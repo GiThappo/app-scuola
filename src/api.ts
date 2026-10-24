@@ -3,6 +3,7 @@ import { richiediLogin, rotteAuth } from "./auth";
 import { aggiorna, type Env } from "./registro/aggiorna";
 import { aggiungiGiorni, giornoIso, inizioAnnoScolastico, oggiRoma } from "./registro/date";
 import { haMateria, parseOrario, stessaMateria } from "./registro/orario";
+import { materialeDi, rotteMateriale } from "./materiale/api";
 import { rotteStudio } from "./studio/api";
 import { ripianifica } from "./studio/ripianifica";
 import { intestazioniSicurezza } from "./sicurezza";
@@ -117,12 +118,17 @@ export function creaApp({ now = () => new Date(), fetchFn }: Opzioni = {}) {
   });
 
   rotteStudio(app, now);
+  rotteMateriale(app, now);
 
   app.get("/api/materie", async (c) => {
     const db = c.env.DB;
     const voti = (await db.prepare("SELECT * FROM voti").all<RigaVoto>()).results;
     const conLezioni = (await db.prepare("SELECT DISTINCT materia FROM lezioni").all<{ materia: string }>()).results.map((r) => r.materia);
-    const nomi = [...new Set([...voti.map((v) => v.materia), ...conLezioni])].sort((a, b) => a.localeCompare(b));
+    const daRegistro = [...new Set([...voti.map((v) => v.materia), ...conLezioni])];
+    // Cartelle del materiale senza voti né lezioni (nomi del PC, magari con maiuscole diverse da Classeviva)
+    const conMateriale = (await db.prepare("SELECT DISTINCT materia FROM file").all<{ materia: string }>()).results.map((r) => r.materia)
+      .filter((m, i, tutte) => !daRegistro.some((r) => stessaMateria(r, m)) && tutte.findIndex((x) => stessaMateria(x, m)) === i);
+    const nomi = [...daRegistro, ...conMateriale].sort((a, b) => a.localeCompare(b));
     return c.json(nomi.map((nome) => {
       const suoi = voti.filter((v) => v.materia === nome);
       const media = mediaRighe(suoi);
@@ -139,7 +145,10 @@ export function creaApp({ now = () => new Date(), fetchFn }: Opzioni = {}) {
       .all<{ data: string; ora: number; argomento: string }>()).results;
     const inArrivo = (await db.prepare("SELECT * FROM agenda WHERE scadenza >= ? ORDER BY scadenza").bind(oggi).all<RigaAgenda>()).results
       .filter((v) => (JSON.parse(v.materie) as string[]).some((m) => stessaMateria(m, nome)));
-    if (!voti.length && !lezioni.length && !inArrivo.length) return c.json({ errore: "Materia non trovata" }, 404);
+    const materiale = await materialeDi(db, nome);
+    if (!voti.length && !lezioni.length && !inArrivo.length && !Object.values(materiale).some((l) => l.length)) {
+      return c.json({ errore: "Materia non trovata" }, 404);
+    }
 
     const diario = new Map<string, { data: string; ore: number[]; argomento: string }>();
     for (const l of lezioni) {
@@ -154,6 +163,7 @@ export function creaApp({ now = () => new Date(), fetchFn }: Opzioni = {}) {
       voti: voti.map((v) => ({ data: v.data, voto: v.voto, valore: v.valore, tipo: v.tipo, periodo: v.periodo, nota: v.nota, nuovo: recente(v.visto_il) })),
       in_arrivo: inArrivo.map(voceApi),
       lezioni: [...diario.values()],
+      materiale,
     });
   });
 

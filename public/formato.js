@@ -42,3 +42,23 @@ export function daQuanto(iso, now = new Date()) {
   if (piuUno(q.giorno) === n.giorno) return `ieri alle ${q.ora}`;
   return `il ${q.dm} alle ${q.ora}`;
 }
+
+/** Classe per il colore della media: rosso sotto il 6, giallo fino al 7, verde dall'8. */
+export const classeMedia = (m) => (m == null ? "" : m < 6 ? "basso" : m < 7 ? "medio" : m >= 8 ? "alto" : "");
+/** Colore stabile per ogni materia, da 0 a 7, ricavato dal nome. */
+export const tonoMateria = (nome) => [...String(nome).toLowerCase()].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 8, 7); // 8 colori in stile.css (la CSP non permette style inline)
+
+const escHtml = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+
+/** Recap del tutor (testo a colonne pensato per il PC) → HTML leggibile sul telefono. */
+export function recapHtml(testo) {
+  const righe = String(testo ?? "").replace(/\r\n?/g, "\n").split("\n");
+  return righe.map((r, i) => {
+    if (!r.trim()) return "";
+    const rientro = r.match(/^ */)[0].length;
+    const pulita = escHtml(r.trim().replace(/\s+\.{3,}\s+/g, ": ").replace(/\s{2,}/g, " · "));
+    if (i === 0) return `<p class="r-titolo">${pulita}</p>`;
+    if (!rientro && /^\d+\.\s/.test(r)) return `<h3>${pulita}</h3>`;
+    return `<p class="r${Math.min(2, Math.floor(rientro / 3))}">${pulita}</p>`;
+  }).join("");
+}
