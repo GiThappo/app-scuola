@@ -2,7 +2,7 @@
 
 Web app per il telefono che prende voti, agenda e lezioni da **Classeviva** e organizza lo studio da sola.
 
-- **Agenda**: compiti, verifiche e interrogazioni dei prossimi 30 giorni, con la scadenza dei compiti calcolata sulla prossima lezione. Le verifiche che i prof non scrivono sul registro le aggiungi tu con **＋ Verifica**.
+- **Agenda**: compiti, verifiche e interrogazioni dei prossimi 30 giorni, ognuno alla data in cui va consegnato (quella della voce sul registro, o quella scritta nel testo). Le verifiche che i prof non scrivono sul registro le aggiungi tu con **＋ Verifica**.
 - **Studio**: piano di studio automatico intorno ai tuoi impegni. I blocchi si possono spostare, segnare come fatti o eliminare.
 - **Materie**: voti, medie, diario delle lezioni e il tuo materiale di studio (schede, PDF, appunti).
 - **Recap**: il resoconto di ogni giorno scritto dal tutor, con quelli dei giorni prima.
