@@ -10,14 +10,13 @@ const titolo = (oggi) => {
   return s.charAt(0).toUpperCase() + s.slice(1);
 };
 
-function voce(v, oggi) {
-  const scadenza = v.dedotta && v.scadenza ? `<div class="nota">per ${esc(etichettaGiorno(v.scadenza, oggi).toLowerCase())} · prossima lezione</div>` : "";
+function voce(v) {
   return `
     <div class="voce tipo-${esc(v.tipo)}">
       <span class="tag ${esc(v.tipo)}">${esc(ETICHETTE[v.tipo] ?? v.tipo)}</span>
       <div class="corpo">
         <b class="${v.nuova ? "nuovo" : ""}">${esc(v.materie.join(" / ") || "Materia?")}</b>
-        <div>${esc(v.testo)}</div>${scadenza}
+        <div>${esc(v.testo)}</div>
         ${v.tua ? `<div class="nota">aggiunta da te</div><div class="azioni"><button class="bottone piccolo" data-elimina="${esc(v.id)}">Elimina</button></div>` : ""}
       </div>
     </div>`;
@@ -33,10 +32,10 @@ export async function vistaAgenda(el) {
     : "";
   const promemoria = agenda.promemoria.map((m) => `<p class="avviso">${esc(m)} domani: hai compiti? La prof non li scrive sul registro.</p>`).join("");
   const giorni = agenda.giorni.length
-    ? agenda.giorni.map((g) => `<h2>${esc(etichettaGiorno(g.data, oggi))}</h2>${g.voci.map((v) => voce(v, oggi)).join("")}`).join("")
+    ? agenda.giorni.map((g) => `<h2>${esc(etichettaGiorno(g.data, oggi))}</h2>${g.voci.map((v) => voce(v)).join("")}`).join("")
     : `<p class="vuoto">Niente in programma nei prossimi 30 giorni.</p>`;
   const daControllare = agenda.da_controllare.length
-    ? `<h2>Data da controllare</h2>${agenda.da_controllare.map((v) => voce(v, oggi)).join("")}` : "";
+    ? `<h2>Data da controllare</h2>${agenda.da_controllare.map((v) => voce(v)).join("")}` : "";
   const senzaVoto = agenda.senza_voto.length
     ? `<h2>In attesa di voto</h2>${agenda.senza_voto.map((s) =>
         `<div class="voce"><div class="corpo"><b>${esc(s.materia)}</b> · ${esc(etichettaGiorno(s.data, oggi))}<div class="nota">${esc(s.testo)}</div></div></div>`).join("")}` : "";
