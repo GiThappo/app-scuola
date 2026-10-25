@@ -27,7 +27,7 @@ test("aggiornamento riuscito", async () => {
   expect(voti.map((v) => v.materia)).toContain("TPSIT");
   const ag = await righe("SELECT * FROM agenda ORDER BY data");
   expect(ag.length).toBe(agenda.agenda.length);
-  expect(ag.some((v) => v.dedotta === 1 && v.scadenza)).toBe(true);
+  expect(ag.every((v) => v.dedotta === 0 && v.scadenza >= v.data)).toBe(true);
   expect(ag.find((v) => /verifica scritta di matematica/i.test(v.testo)).tipo).toBe("VERIFICA");
   expect(await impostazione("ultimo_ok")).toBe(ORA.toISOString());
   expect(await impostazione("ultimo_errore")).toBeFalsy();
@@ -84,21 +84,21 @@ test("errore riuscito dopo un errore: l'errore si cancella", async () => {
   expect(await impostazione("ultimo_errore")).toBeFalsy();
 });
 
-test("senza orario: riesce, compiti senza scadenza", async () => {
+test("senza orario: riesce, compiti per la data della voce", async () => {
   await E.DB.exec("DELETE FROM impostazioni");
   expect(await aggiorna(E, ORA, finto().fn)).toEqual({ ok: true });
   const compiti = await righe("SELECT scadenza FROM agenda WHERE tipo = 'COMPITO'");
   expect(compiti.length).toBeGreaterThan(0);
-  expect(compiti.every((c) => c.scadenza === null)).toBe(true);
+  expect(compiti.every((c) => c.scadenza)).toBe(true);
 });
 
-test("compito già scaduto: la scadenza resta la lezione passata, non la prossima", async () => {
-  // Domenica 25: il calendario di Classeviva parte da oggi, ma il compito del 22 era per venerdì 23
+test("compito già scaduto: la scadenza resta la data della voce", async () => {
+  // Domenica 25: il calendario di Classeviva parte da oggi, ma il compito datato 22 era per giovedì 22
   const domenica = new Date("2026-10-25T10:00:00Z");
   const calendario = (await import("./fixtures/calendar.json")).calendar.filter((c: any) => c.dayDate >= "2026-10-25");
   await aggiorna(E, domenica, finto({ calendario }).fn);
   const v = await E.DB.prepare("SELECT scadenza FROM agenda WHERE id = 3000331").first<{ scadenza: string }>();
-  expect(v?.scadenza).toBe("2026-10-23");
+  expect(v?.scadenza).toBe("2026-10-22");
 });
 
 test("risposta 200 senza i dati: non cancella i voti", async () => {

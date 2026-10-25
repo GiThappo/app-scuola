@@ -5,7 +5,6 @@ import { oggiRoma } from "../src/registro/date";
 import { classificaTipo, materieVoce, scadenza } from "../src/registro/agenda";
 
 const orario = parseOrario(orarioMd);
-const scuola = new Set(["2026-10-24", "2026-10-26", "2026-10-27", "2026-10-28", "2026-10-29", "2026-10-30", "2026-10-31"]); // 25 domenica
 
 test("parseOrario", () => {
   expect(orario.giorni[1]).toEqual(["Inglese", "TPSIT", "Italiano", "Matematica", "Telecomunicazioni"]);
@@ -32,38 +31,21 @@ test("tipo", () => {
   expect(classificaTipo("testo argomentativo")).toBe("COMPITO"); // "test" solo come parola intera
 });
 
-test("compito: prossima lezione della materia", () => {
-  // venerdì 23 → prossima Matematica sabato 24
-  expect(scadenza({ data: "2026-10-23", tipo: "COMPITO", testo: "es. pag. 59", materie: ["Matematica"] }, orario, scuola, "2026-11-13"))
-    .toEqual({ scadenza: "2026-10-24", dedotta: true });
-  // sabato 24 → Italiano: domenica no, lunedì 26 sì
-  expect(scadenza({ data: "2026-10-24", tipo: "COMPITO", testo: "leggere", materie: ["Italiano"] }, orario, scuola, "2026-11-13").scadenza).toBe("2026-10-26");
+test("compito: data della voce (= giorno di consegna)", () => {
+  // voce datata lunedì 26: è per lunedì 26, non per la lezione dopo
+  expect(scadenza({ data: "2026-10-26", testo: "Studiare la teoria a pag. 19, 20, es. pag. 62 n 701" }))
+    .toEqual({ scadenza: "2026-10-26", dedotta: false });
 });
 
 test("verifica: data della voce", () => {
-  expect(scadenza({ data: "2026-10-26", tipo: "VERIFICA", testo: "verifica Medioevo", materie: ["Italiano"] }, orario, scuola, "2026-11-13"))
+  expect(scadenza({ data: "2026-10-26", testo: "verifica Medioevo" }))
     .toEqual({ scadenza: "2026-10-26", dedotta: false });
 });
 
 test("data esplicita nel testo vince", () => {
-  expect(scadenza({ data: "2026-10-23", tipo: "COMPITO", testo: "studiare pag. 79 per il 28/10", materie: ["Italiano"] }, orario, scuola, "2026-11-13"))
+  expect(scadenza({ data: "2026-10-23", testo: "studiare pag. 79 per il 28/10" }))
     .toEqual({ scadenza: "2026-10-28", dedotta: false });
-  expect(scadenza({ data: "2026-10-23", tipo: "COMPITO", testo: "ripasso per lunedì 26", materie: ["Italiano"] }, orario, scuola, "2026-11-13"))
+  expect(scadenza({ data: "2026-10-23", testo: "ripasso per lunedì 26" }))
     .toEqual({ scadenza: "2026-10-26", dedotta: false });
-  expect(scadenza({ data: "2026-12-20", tipo: "COMPITO", testo: "entro il 8/1", materie: ["Italiano"] }, orario, scuola, "2027-01-10").scadenza).toBe("2027-01-08");
-});
-
-test("nessuna lezione nota → data da controllare", () => {
-  expect(scadenza({ data: "2026-10-31", tipo: "COMPITO", testo: "esercizi", materie: ["Matematica"] }, orario, scuola, "2026-10-31"))
-    .toEqual({ scadenza: null, dedotta: false });
-  expect(scadenza({ data: "2026-10-23", tipo: "COMPITO", testo: "esercizi", materie: [] }, orario, scuola, "2026-11-13").scadenza).toBeNull();
-});
-
-test("docente con due materie: decide l'orario del giorno", () => {
-  const dm = new Map([["Prof. A", ["Sistemi e reti", "TPSIT"]]]);
-  expect(materieVoce({ subjectDesc: null, authorName: "Prof. A", evtDatetimeBegin: "2026-10-26T08:00:00+01:00" }, dm, orario)).toEqual(["TPSIT"]);
-  expect(materieVoce({ subjectDesc: null, authorName: "Prof. A", evtDatetimeBegin: "2026-10-27T08:00:00+01:00" }, dm, orario)).toEqual(["Sistemi e reti"]);
-  expect(materieVoce({ subjectDesc: null, authorName: "Prof. A", evtDatetimeBegin: "2026-10-31T08:00:00+01:00" }, dm, orario)).toEqual(["Sistemi e reti", "TPSIT"]);
-  expect(materieVoce({ subjectDesc: "STORIA", authorName: "Prof. A", evtDatetimeBegin: "2026-10-26T08:00:00+01:00" }, dm, orario)).toEqual(["Storia"]);
-  expect(materieVoce({ subjectDesc: null, authorName: "Prof. Z", evtDatetimeBegin: "2026-10-26T08:00:00+01:00" }, dm, orario)).toEqual([]);
+  expect(scadenza({ data: "2026-12-20", testo: "entro il 8/1" }).scadenza).toBe("2027-01-08");
 });

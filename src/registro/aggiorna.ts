@@ -45,15 +45,6 @@ export async function aggiorna(env: Env, now: Date, fetchFn: typeof fetch = fetc
         docenteMaterie.set(t.teacherName, [...(docenteMaterie.get(t.teacherName) ?? []), nomeBreve(m.description)]);
       }
     }
-    // Il calendario parte da oggi: per i compiti già scaduti servono anche i giorni passati (lezioni e giorni salvati)
-    const giorniPassati = (await db.prepare("SELECT data FROM giorni WHERE scuola = 1").all<{ data: string }>()).results.map((g) => g.data);
-    const giorniScuola = new Set([
-      ...giorniPassati,
-      ...dati.lezioni.map((l) => l.evtDate as string),
-      ...dati.calendario.filter((c) => c.dayStatus === "SD").map((c) => c.dayDate as string),
-    ]);
-    const ultimoGiornoNoto = dati.calendario.map((c) => c.dayDate as string).sort().at(-1) ?? oggi;
-
     const s: D1PreparedStatement[] = [];
 
     // Voti: Classeviva dà tutto l'anno, quindi quelli che non ci sono più vanno tolti
@@ -76,7 +67,7 @@ export async function aggiorna(env: Env, now: Date, fetchFn: typeof fetch = fetc
       const testo = (e.notes ?? "").trim();
       const materie = materieVoce(e, docenteMaterie, orario);
       const tipo = classificaTipo(testo);
-      const sc = scadenza({ data, tipo, testo, materie }, orario, giorniScuola, ultimoGiornoNoto);
+      const sc = scadenza({ data, testo });
       s.push(db.prepare(
         `INSERT INTO agenda (id, data, materie, testo, docente, tipo, scadenza, dedotta, visto_il) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET data = excluded.data, materie = excluded.materie, testo = excluded.testo, docente = excluded.docente,

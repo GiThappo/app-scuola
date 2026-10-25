@@ -1,4 +1,4 @@
-import { aggiungiGiorni, giornoIso } from "./date";
+import { giornoIso } from "./date";
 import { type Orario, haMateria, nomeBreve } from "./orario";
 
 export type TipoVoce = "COMPITO" | "VERIFICA" | "INTERROGAZIONE";
@@ -56,22 +56,9 @@ function dataEsplicita(testo: string, da: string): string | null {
 }
 
 /**
- * Scadenza di una voce. Data esplicita nel testo > data della voce (verifiche, interrogazioni)
- * > prossima lezione della materia (compiti, dedotta). null se non si può sapere.
+ * Scadenza di una voce. Data esplicita nel testo > data della voce: in questa classe i prof
+ * datano la voce al giorno in cui il compito va consegnato o c'è la prova (non al giorno in cui la scrivono).
  */
-export function scadenza(
-  voce: { data: string; tipo: TipoVoce; testo: string; materie: string[] },
-  orario: Orario,
-  giorniScuola: Set<string>,
-  ultimoGiornoNoto: string,
-): { scadenza: string | null; dedotta: boolean } {
-  const esplicita = dataEsplicita(voce.testo, voce.data);
-  if (esplicita) return { scadenza: esplicita, dedotta: false };
-  if (voce.tipo !== "COMPITO") return { scadenza: voce.data, dedotta: false };
-  for (let d = aggiungiGiorni(voce.data, 1); d <= ultimoGiornoNoto; d = aggiungiGiorni(d, 1)) {
-    if (giorniScuola.has(d) && voce.materie.some((m) => haMateria(orario, giornoIso(d), m))) {
-      return { scadenza: d, dedotta: true };
-    }
-  }
-  return { scadenza: null, dedotta: false };
+export function scadenza(voce: { data: string; testo: string }): { scadenza: string; dedotta: boolean } {
+  return { scadenza: dataEsplicita(voce.testo, voce.data) ?? voce.data, dedotta: false };
 }
