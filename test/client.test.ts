@@ -21,6 +21,14 @@ test("scarica tutte le liste", async () => {
   expect(d.lezioni.length).toBe(lessons.lessons.length);
   expect(d.calendario.length).toBe(calendar.calendar.length);
   expect(d.didattica).toEqual(didactics.didacticts);
+  expect(d.medie?.subjectAverages["2"].globalAverage.average).toBe(6.75);
+});
+
+test("medie di Classeviva: se non arrivano non è un errore", async () => {
+  const { fn } = finto({ stato: (url) => (url.endsWith("/avg") ? 500 : 200) });
+  const d = await scaricaRegistro("u", "p", "2026-10-23", fn);
+  expect(d.medie).toBeNull();
+  expect(d.voti.length).toBe(grades.grades.length);
 });
 
 test("login con intestazioni, credenziali codificate e cookie della sessione", async () => {

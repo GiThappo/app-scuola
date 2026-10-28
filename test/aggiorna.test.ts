@@ -16,7 +16,7 @@ const impostazione = async (k: string) =>
 
 beforeEach(async () => {
   await applyD1Migrations(E.DB, E.TEST_MIGRATIONS);
-  for (const t of ["voti", "agenda", "lezioni", "giorni", "periodi", "impostazioni"]) await E.DB.exec(`DELETE FROM ${t}`);
+  for (const t of ["voti", "agenda", "lezioni", "giorni", "periodi", "impostazioni", "medie"]) await E.DB.exec(`DELETE FROM ${t}`);
   await E.DB.prepare("INSERT INTO impostazioni (chiave, valore) VALUES ('orario_md', ?)").bind(orarioMd).run();
 });
 
@@ -33,6 +33,23 @@ test("aggiornamento riuscito", async () => {
   expect(await impostazione("ultimo_errore")).toBeFalsy();
   expect((await righe("SELECT * FROM giorni")).length).toBeGreaterThan(0);
   expect((await righe("SELECT * FROM lezioni")).length).toBeGreaterThan(0);
+});
+
+test("voti blu e medie di Classeviva", async () => {
+  await aggiorna(E, ORA, finto().fn);
+  expect(await righe("SELECT materia, voto, valore, blu FROM voti WHERE blu = 1 ORDER BY materia")).toEqual([
+    { materia: "Informatica", voto: "6", valore: null, blu: 1 },
+    { materia: "Inglese", voto: "8", valore: null, blu: 1 },
+    { materia: "Telecomunicazioni", voto: "6", valore: null, blu: 1 },
+  ]);
+  expect(await righe("SELECT materia, media, n_voti FROM medie ORDER BY materia")).toEqual([
+    { materia: "Informatica", media: null, n_voti: 0 },
+    { materia: "Matematica", media: 6.75, n_voti: 2 },
+    { materia: "TPSIT", media: 5.5, n_voti: 1 },
+  ]);
+  // se le medie non arrivano restano quelle di prima
+  await aggiorna(E, DOPO, finto({ stato: (url) => (url.endsWith("/avg") ? 500 : 200) }).fn);
+  expect((await righe("SELECT * FROM medie")).length).toBe(3);
 });
 
 test("visto_il resta quello della prima volta", async () => {

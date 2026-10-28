@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
 import orarioMd from "./fixtures/orario.md?raw";
 import { parseOrario } from "../src/registro/orario";
-import { pianifica, type InputPiano } from "../src/studio/piano";
+import { pianifica, stimaDurata, type InputPiano } from "../src/studio/piano";
 import { localeRoma, utcDaRoma } from "../src/studio/ore";
 
 const orario = parseOrario(orarioMd);
@@ -116,7 +116,39 @@ test("la sera in più parte dalle 19:30, mai durante la scuola", () => {
 test("un blocco tuo della stessa materia quel giorno copre la sessione (anche il piano fatto prima dal tutor)", () => {
   const r = pianifica(base({
     voci: [voce(1, "COMPITO", "2026-10-24"), voce(2, "VERIFICA", "2026-10-26", "Italiano")],
-    tuoi: [{ giorno: "2026-10-23", materia: "Matematica" }, { giorno: "2026-10-24", materia: "italiano" }],
+    tuoi: [{ giorno: "2026-10-23", materia: "Matematica", testo: "compiti" }, { giorno: "2026-10-24", materia: "italiano", testo: "ripasso" }],
   }));
   expect(r.blocchi.map((b) => `${b.chiave} ${b.inizio.slice(0, 10)}`)).toEqual(["v2:-3:1 2026-10-23", "v2:-3:2 2026-10-23", "v2:-1 2026-10-25"]);
+});
+
+test("un blocco tuo della stessa materia che parla d'altro non copre i compiti", () => {
+  const testo = "Studiare la teoria a pag. 73, 74, 75, es. pag. 96 n 3, 9, 10";
+  const r = pianifica(base({
+    adesso: "2026-10-28T14:00", // mer, giorno leggero
+    voci: [voce(1, "COMPITO", "2026-10-29", "Matematica", testo)],
+    tuoi: [{ giorno: "2026-10-28", materia: "Matematica", testo: "disequazioni con valore assoluto (2/3)" }],
+  }));
+  expect(r.blocchi.map((b) => `${b.chiave} ${b.inizio} ${b.durata}`)).toEqual(["v1 2026-10-28T15:00 50"]);
+  // lo copre solo se parla delle stesse pagine
+  const coperto = pianifica(base({
+    adesso: "2026-10-28T14:00", voci: [voce(1, "COMPITO", "2026-10-29", "Matematica", testo)],
+    tuoi: [{ giorno: "2026-10-28", materia: "Matematica", testo: "teoria pag. 73-75" }],
+  }));
+  expect(coperto.blocchi).toEqual([]);
+});
+
+test("durata del compito stimata dal testo: 10 min a pagina di teoria, 6 a esercizio, a pezzi da un'ora al massimo", () => {
+  const testo = "Studiare la teoria a pag. 73, 74, 75, es. pag. 96 n 3, 9, 10, 11, 12, 13, 14, 20, 21, 22, 23, 24";
+  const r = pianifica(base({ adesso: "2026-10-28T14:00", voci: [voce(1, "COMPITO", "2026-10-29", "Matematica", testo)] }));
+  expect(orari(r)).toEqual(["2026-10-28T15:00 60", "2026-10-28T16:10 45"]); // 30 + 72 = 102 → 105
+  expect(r.blocchi.map((b) => b.chiave)).toEqual(["v1:1", "v1:2"]);
+});
+
+test("stimaDurata", () => {
+  expect(stimaDurata("Studiare la teoria a pag. 73, 74, 75, es. pag. 96 n 3, 9, 10, 11, 12, 13, 14, 20, 21, 22, 23, 24")).toBe(105);
+  expect(stimaDurata("Es. pag. 58 dal n 612 al n 624")).toBe(80); // 13 esercizi
+  expect(stimaDurata("Studiare pag. 19-20")).toBe(30); // minimo mezz'ora
+  expect(stimaDurata("Studiare la teoria a pag. 19, 20, es. pag. 62 n 701, 703, 705, 707, 708, 709, 713, 715, 718, 720, 723")).toBe(90);
+  expect(stimaDurata("Leggere il capitolo")).toBe(45); // non si capisce: come prima
+  expect(stimaDurata("es. 1-40")).toBe(120); // massimo due ore
 });

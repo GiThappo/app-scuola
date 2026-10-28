@@ -1,6 +1,8 @@
 import type { Hono } from "hono";
 import type { Env } from "../registro/aggiorna";
 import { stessaMateria } from "../registro/orario";
+import { oggiRoma } from "../registro/date";
+import { recapAutomatico } from "../registro/recap";
 
 const PEZZO = 1_000_000; // byte: in D1 una riga non può superare 2 MB
 const MAX_FILE = 25_000_000;
@@ -96,12 +98,19 @@ export function rotteMateriale(app: Hono<{ Bindings: Env }>, now: () => Date) {
     return tolto.results.length ? c.json({ ok: true }) : c.json({ errore: "File non trovato" }, 404);
   });
 
-  app.get("/api/recap", async (c) =>
-    c.json((await c.env.DB.prepare("SELECT data FROM recap ORDER BY data DESC").all<{ data: string }>()).results));
+  // Oggi, finché il tutor non carica il suo, c'è il recap scritto dall'app
+  app.get("/api/recap", async (c) => {
+    const elenco: { data: string; automatico?: boolean }[] = (await c.env.DB.prepare("SELECT data FROM recap ORDER BY data DESC").all<{ data: string }>()).results;
+    const oggi = oggiRoma(now());
+    return c.json(elenco.some((r) => r.data === oggi) ? elenco : [{ data: oggi, automatico: true }, ...elenco.filter((r) => r.data < oggi)]);
+  });
 
   app.get("/api/recap/:data", async (c) => {
-    const r = await c.env.DB.prepare("SELECT data, testo, caricato_il FROM recap WHERE data = ?").bind(c.req.param("data")).first();
-    return r ? c.json(r) : c.json({ errore: "Recap non trovato" }, 404);
+    const data = c.req.param("data");
+    const r = await c.env.DB.prepare("SELECT data, testo, caricato_il FROM recap WHERE data = ?").bind(data).first();
+    if (r) return c.json(r);
+    if (data === oggiRoma(now())) return c.json({ data, testo: await recapAutomatico(c.env.DB, now()), caricato_il: null, automatico: true });
+    return c.json({ errore: "Recap non trovato" }, 404);
   });
 
   app.put("/api/recap/:data", async (c) => {

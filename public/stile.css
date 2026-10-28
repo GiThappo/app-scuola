@@ -169,3 +169,53 @@ h1 a { text-decoration: none; color: var(--tenue); margin-right: 2px; }
 .recap p { margin: 3px 0; overflow-wrap: anywhere; }
 .recap .r1 { padding-left: 0; }
 .recap .r2 { padding-left: 14px; color: var(--tenue); font-size: 15px; }
+
+/* Orario */
+.giorno-orario { display: block; scroll-margin-top: 12px; }
+.giorno-orario.oggi { border-color: var(--accento); }
+.testa-giorno { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.testa-giorno .nota { margin-left: auto; }
+.tag.OGGI { background: var(--accento); }
+.ore-lezione { list-style: none; margin: 8px 0 0; padding: 0; }
+.ore-lezione li { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-top: 1px solid var(--bordo); }
+.ore-lezione .ora { min-width: 44px; color: var(--tenue); font-variant-numeric: tabular-nums; font-size: 14px; }
+.pallino { width: 10px; height: 10px; border-radius: 50%; flex: none; background: var(--tono); }
+
+/* Studio: una riga per blocco, si apre toccandola */
+details.blocco { display: block; padding: 0; }
+details.blocco > summary { list-style: none; display: flex; align-items: center; gap: 10px; padding: 10px 12px; min-height: 52px; cursor: pointer; }
+details.blocco > summary::-webkit-details-marker { display: none; }
+details.blocco > summary .nome { flex: 1; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+details.blocco > summary .ora { min-width: 0; color: var(--tenue); font-weight: 600; }
+details.blocco > summary .tag { margin-top: 0; }
+details.blocco .freccia { color: var(--tenue); transition: transform .15s; }
+details.blocco[open] .freccia { transform: rotate(90deg); }
+details.blocco > .corpo { padding: 0 12px 12px 58px; }
+details.blocco .cosa { font-weight: 600; margin: 2px 0; }
+details.blocco .azioni a.bottone { display: inline-grid; place-items: center; text-decoration: none; }
+details.blocco.fatto > summary .nome { text-decoration: line-through; color: var(--tenue); }
+.blocco.fatto .corpo > b, .blocco.fatto .corpo > div:not(.azioni) { text-decoration: none; }
+.iniziale.piccola { width: 32px; height: 32px; border-radius: 9px; font-size: 14px; }
+.tag.DOMANI { background: var(--compito); }
+.tag.RIPASSO, .tag.STUDIO { background: #64748b; }
+@media (max-width: 380px) { details.blocco > .corpo { padding-left: 12px; } }
+
+/* Agenda: per domani in cima */
+.per-domani { background: color-mix(in srgb, var(--compito) 8%, var(--carta)); border: 1px solid color-mix(in srgb, var(--compito) 35%, var(--bordo)); border-radius: 16px; padding: 4px 12px 8px; margin-top: 14px; }
+.per-domani h2 { color: var(--compito); }
+.per-domani .voce { align-items: center; }
+.per-domani .voce.fatto .testo, .per-domani .voce.fatto b { text-decoration: line-through; color: var(--tenue); }
+.spunta {
+  flex: none; width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--compito); background: var(--carta);
+  color: #fff; font-weight: 700; cursor: pointer; display: grid; place-items: center; padding: 0;
+}
+.voce.fatto .spunta { background: var(--ok); border-color: var(--ok); }
+
+/* Materie: voti blu che non fanno media */
+.voto { flex: none; min-width: 44px; text-align: center; font-weight: 700; font-size: 18px; padding: 4px 8px; border-radius: 10px; background: var(--sfondo); }
+.voto.basso { color: #fff; background: var(--verifica); }
+.voto.medio { color: var(--medio); background: color-mix(in srgb, var(--medio) 14%, transparent); }
+.voto.alto { color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, transparent); }
+.voto.blu { color: #fff; background: #3b82f6; }
+.voce.voto-blu { align-items: center; }
+.voce:has(.voto) { align-items: center; }

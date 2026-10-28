@@ -10,8 +10,9 @@ import { intestazioniSicurezza } from "./sicurezza";
 
 type Opzioni = { now?: () => Date; fetchFn?: typeof fetch };
 
-type RigaAgenda = { id: number; data: string; materie: string; testo: string; tipo: string; scadenza: string | null; dedotta: number; visto_il: string };
-type RigaVoto = { id: number; materia: string; data: string; voto: string; valore: number | null; peso: number; tipo: string; periodo: number; nota: string; visto_il: string };
+type RigaAgenda = { id: number; data: string; materie: string; testo: string; tipo: string; scadenza: string | null; dedotta: number; visto_il: string; fatto: number };
+type RigaVoto = { id: number; materia: string; data: string; voto: string; valore: number | null; peso: number; tipo: string; periodo: number; nota: string; visto_il: string; blu: number };
+type RigaMedia = { materia: string; media: number | null; n_voti: number };
 
 const GIORNO_MS = 24 * 3600 * 1000;
 const PAUSA_AGGIORNA_MS = 60 * 1000;
@@ -60,9 +61,17 @@ export function creaApp({ now = () => new Date(), fetchFn }: Opzioni = {}) {
     const voci = (await db.prepare("SELECT * FROM agenda ORDER BY scadenza, id").all<RigaAgenda>()).results;
     const voti = (await db.prepare("SELECT materia, data FROM voti").all<{ materia: string; data: string }>()).results;
 
+    // Per domani va in cima: un compito è fatto se l'hai segnato tu o se hai finito tutti i suoi blocchi
+    const blocchi = (await db.prepare("SELECT voce_id, fatto FROM blocchi WHERE eliminato = 0 AND voce_id IS NOT NULL").all<{ voce_id: number; fatto: number }>()).results;
+    const fatto = (v: RigaAgenda) => {
+      const suoi = blocchi.filter((b) => b.voce_id === v.id);
+      return !!v.fatto || (suoi.length > 0 && suoi.every((b) => b.fatto));
+    };
+    const perDomani = voci.filter((v) => v.scadenza === domani).map((v) => ({ ...voceApi(v), fatto: fatto(v) }));
+
     const giorni = new Map<string, ReturnType<typeof voceApi>[]>();
     for (const v of voci) {
-      if (v.scadenza && v.scadenza >= domani && v.scadenza <= aggiungiGiorni(oggi, 30)) {
+      if (v.scadenza && v.scadenza > domani && v.scadenza <= aggiungiGiorni(oggi, 30)) {
         giorni.set(v.scadenza, [...(giorni.get(v.scadenza) ?? []), voceApi(v)]);
       }
     }
@@ -83,6 +92,7 @@ export function creaApp({ now = () => new Date(), fetchFn }: Opzioni = {}) {
     const materie = (await db.prepare("SELECT DISTINCT materia FROM voti UNION SELECT DISTINCT materia FROM lezioni ORDER BY materia").all<{ materia: string }>()).results;
 
     return c.json({
+      per_domani: perDomani,
       giorni: [...giorni].sort(([a], [b]) => a.localeCompare(b)).map(([data, voci]) => ({ data, voci })),
       da_controllare: daControllare,
       senza_voto: senzaVoto,
@@ -109,12 +119,35 @@ export function creaApp({ now = () => new Date(), fetchFn }: Opzioni = {}) {
     return c.json({ id: r!.id }, 201);
   });
 
+  // Fatto o da fare: vale per la voce e per i blocchi del piano fatti per lei
+  app.patch("/api/agenda/:id", async (c) => {
+    const db = c.env.DB;
+    const id = Number(c.req.param("id"));
+    const b = await c.req.json<Record<string, unknown>>().catch(() => ({}) as Record<string, unknown>);
+    if (typeof b.fatto !== "boolean") return c.json({ errore: "Serve fatto: true o false" }, 400);
+    const r = await db.prepare("UPDATE agenda SET fatto = ? WHERE id = ? RETURNING id").bind(b.fatto ? 1 : 0, id).first();
+    if (!r) return c.json({ errore: "Voce non trovata" }, 404);
+    await db.prepare("UPDATE blocchi SET fatto = ?, versione = versione + 1 WHERE voce_id = ? AND eliminato = 0 AND fatto != ?")
+      .bind(b.fatto ? 1 : 0, id, b.fatto ? 1 : 0).run();
+    await ripianifica(db, now());
+    return c.json({ ok: true });
+  });
+
   app.delete("/api/agenda/:id", async (c) => {
     const db = c.env.DB;
     const r = await db.prepare("DELETE FROM agenda WHERE id = ? AND id < 0 RETURNING id").bind(Number(c.req.param("id"))).first();
     if (!r) return c.json({ errore: "Voce non trovata" }, 404);
     await ripianifica(db, now());
     return c.json({ ok: true });
+  });
+
+  app.get("/api/orario", async (c) => {
+    const { orario_md } = await impostazioni(c.env.DB);
+    const orario = parseOrario(orario_md ?? "");
+    const giorni = Object.keys(orario.giorni).map(Number).sort((a, b) => a - b).map((g) => ({
+      giorno: g, ore: orario.giorni[g], uscita: orario.uscita[g] ?? null, giornata: orario.giornata[g] ?? null,
+    }));
+    return c.json({ oggi: oggiRoma(now()), giorni, note: orario.note });
   });
 
   rotteStudio(app, now);
@@ -129,10 +162,12 @@ export function creaApp({ now = () => new Date(), fetchFn }: Opzioni = {}) {
     const conMateriale = (await db.prepare("SELECT DISTINCT materia FROM file").all<{ materia: string }>()).results.map((r) => r.materia)
       .filter((m, i, tutte) => !daRegistro.some((r) => stessaMateria(r, m)) && tutte.findIndex((x) => stessaMateria(x, m)) === i);
     const nomi = [...daRegistro, ...conMateriale].sort((a, b) => a.localeCompare(b));
+    const medie = (await db.prepare("SELECT * FROM medie").all<RigaMedia>()).results;
     return c.json(nomi.map((nome) => {
       const suoi = voti.filter((v) => v.materia === nome);
-      const media = mediaRighe(suoi);
-      return { nome, media, n_voti: suoi.length, sotto_sei: media != null && media < 6 };
+      const cv = medie.find((m) => m.materia === nome);
+      const media = cv ? cv.media : mediaRighe(suoi);
+      return { nome, media, n_voti: suoi.length, sotto_sei: media != null && media < 6, media_classeviva: !!cv };
     }));
   });
 
@@ -157,10 +192,15 @@ export function creaApp({ now = () => new Date(), fetchFn }: Opzioni = {}) {
       d.ore.push(l.ora);
       diario.set(k, d);
     }
+    // La media è quella di Classeviva (i voti blu non contano); se manca, calcolata qui con le stesse regole
+    const cv = await db.prepare("SELECT * FROM medie WHERE materia = ?").bind(nome).first<RigaMedia>();
     return c.json({
       nome,
-      media: mediaRighe(voti),
-      voti: voti.map((v) => ({ data: v.data, voto: v.voto, valore: v.valore, tipo: v.tipo, periodo: v.periodo, nota: v.nota, nuovo: recente(v.visto_il) })),
+      media: cv ? cv.media : mediaRighe(voti),
+      media_classeviva: !!cv,
+      voti: voti.map((v) => ({
+        data: v.data, voto: v.voto, valore: v.valore, tipo: v.tipo, periodo: v.periodo, nota: v.nota, nuovo: recente(v.visto_il), blu: !!v.blu,
+      })),
       in_arrivo: inArrivo.map(voceApi),
       lezioni: [...diario.values()],
       materiale,

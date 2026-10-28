@@ -17,8 +17,8 @@ export type InputPiano = {
   materieDeboli: string[];
   /** materia → argomenti recenti dal diario delle lezioni */
   argomenti: Record<string, string[]>;
-  /** blocchi messi dallo studente: quel giorno quella materia è già coperta */
-  tuoi: { giorno: string; materia: string }[];
+  /** blocchi messi dallo studente: quel giorno quella materia è già coperta (i compiti solo se il blocco ne parla) */
+  tuoi: { giorno: string; materia: string; testo: string }[];
 };
 
 export type BloccoPiano = { chiave: string; materia: string; cosa: string; dettagli: string; voceId: number | null; inizio: string; durata: number };
@@ -26,6 +26,7 @@ export type BloccoPiano = { chiave: string; materia: string; cosa: string; detta
 const ORIZZONTE = 14;
 const PAUSA = 10;
 const MAX_PESANTE = 30;
+const MAX_BLOCCO = 60;
 const FINE = 19 * 60 + 30;
 const SERA = 22 * 60; // un compito per domani, se non c'è altro posto, si fa stasera
 const GIORNI = ["dom", "lun", "mar", "mer", "gio", "ven", "sab"];
@@ -41,15 +42,52 @@ function finestre(giorno: string, i: InputPiano): [number, number][] {
 const pesante = (giorno: string, i: InputPiano) =>
   giornoIso(giorno) !== 7 && !i.giorniSenzaScuola.has(giorno) && (i.orario.uscita[giornoIso(giorno)] ?? "") >= "14:00";
 
-/** Parti di una sessione: nei giorni pesanti blocchi corti. */
+/** Parti di una sessione: nei giorni pesanti blocchi corti, negli altri al massimo un'ora di fila. */
 const parti = (durata: number, corti: boolean) => {
-  if (!corti) return [durata];
+  const max = corti ? MAX_PESANTE : MAX_BLOCCO;
   const p: number[] = [];
-  for (let resto = durata; resto > 0; resto -= MAX_PESANTE) p.push(Math.min(MAX_PESANTE, resto));
+  for (let resto = durata; resto > 0; resto -= max) p.push(Math.min(max, resto));
   return p;
 };
 
-type Sessione = { base: string; materia: string; cosa: string; dettagli: string; voceId: number | null; giorni: string[]; durata: number };
+/** Quanti numeri ci sono in "3, 9, 10-12" o "dal n 612 al n 624" (gli intervalli contano tutti). */
+function contaNumeri(s: string): number {
+  const conIntervalli = s.replace(/dal\s+n\.?\s*(\d+)\s+al\s+n\.?\s*(\d+)/gi, "$1-$2");
+  return [...conIntervalli.matchAll(/(\d+)\s*[-–]\s*(\d+)|\d+/g)].reduce((n, m) => n + (m[2] ? Math.max(1, Number(m[2]) - Number(m[1]) + 1) : 1), 0);
+}
+const PAGINE = /\bpag(?:ine|g)?\.?\s*((?:\d+(?:\s*[-–]\s*\d+)?(?:\s*(?:,|e)\s*)?)+)/gi;
+
+/** Numeri di pagina citati nel testo, intervalli compresi. */
+function pagine(testo: string): Set<number> {
+  const p = new Set<number>();
+  const conIntervalli = testo.replace(/da\s+pag\.?\s*(\d+)\s+a\s+pag\.?\s*(\d+)/gi, "pag. $1-$2");
+  for (const [, lista] of conIntervalli.matchAll(PAGINE)) {
+    for (const m of lista.matchAll(/(\d+)\s*[-–]\s*(\d+)|\d+/g)) {
+      const [da, a] = m[2] ? [Number(m[1]), Number(m[2])] : [Number(m[0]), Number(m[0])];
+      for (let n = da; n <= Math.min(a, da + 300); n++) p.add(n);
+    }
+  }
+  return p;
+}
+
+/** Minuti per un compito: 10 a pagina di teoria, 6 a esercizio; tra mezz'ora e due ore. Se il testo non dice niente, 45. */
+export function stimaDurata(testo: string): number {
+  const i = testo.search(/\bes(?:ercizi|\.)/i);
+  const [teoria, esercizi] = i < 0 ? [testo, ""] : [testo.slice(0, i), testo.slice(i).replace(/^\S+/, "")];
+  const nPagine = pagine(teoria).size;
+  const nEsercizi = contaNumeri(esercizi.replace(/\bpag(?:ine|g)?\.?\s*\d+/gi, ""));
+  if (!nPagine && !nEsercizi) return 45;
+  return Math.min(120, Math.max(30, Math.ceil((nPagine * 10 + nEsercizi * 6) / 5) * 5));
+}
+
+/** Un blocco tuo copre un compito se parla delle stesse pagine, o dice "compiti" e non si può controllare. */
+function copreCompito(tuo: string, compito: string): boolean {
+  const [a, b] = [pagine(tuo), pagine(compito)];
+  if ([...a].some((n) => b.has(n))) return true;
+  return /compit/i.test(tuo) && (!a.size || !b.size);
+}
+
+type Sessione = { base: string; materia: string; cosa: string; dettagli: string; voceId: number | null; giorni: string[]; durata: number; compito: boolean };
 
 export function pianifica(i: InputPiano): { blocchi: BloccoPiano[]; nonCiSta: string[] } {
   const oggi = i.adesso.slice(0, 10);
@@ -89,7 +127,7 @@ export function pianifica(i: InputPiano): { blocchi: BloccoPiano[]; nonCiSta: st
   for (const v of voci.filter((v) => v.tipo === "COMPITO").sort(perScadenza)) {
     const giorni: string[] = [];
     for (let g = aggiungiGiorni(v.scadenza!, -1); g >= oggi; g = aggiungiGiorni(g, -1)) giorni.push(g);
-    sessioni.push({ base: `v${v.id}`, materia: nome(v), cosa: `Compito per ${etichetta(v.scadenza!)}`, dettagli: v.testo, voceId: v.id, giorni, durata: 45 });
+    sessioni.push({ base: `v${v.id}`, materia: nome(v), cosa: `Compito per ${etichetta(v.scadenza!)}`, dettagli: v.testo, voceId: v.id, giorni, durata: stimaDurata(v.testo), compito: true });
   }
   for (const v of voci.filter((v) => v.tipo !== "COMPITO").sort(perScadenza)) {
     const verifica = v.tipo === "VERIFICA";
@@ -100,14 +138,14 @@ export function pianifica(i: InputPiano): { blocchi: BloccoPiano[]; nonCiSta: st
       sessioni.push({
         base: `v${v.id}:-${k}`, materia: nome(v), voceId: v.id, giorni: [g],
         cosa: k === 1 ? `Ripasso ${verifica ? "leggero " : ""}per ${prova}` : `Studio per ${prova}`,
-        dettagli: conArgomenti(v.testo, v.materie[0]), durata: k === 1 ? 30 : verifica ? 60 : 45,
+        dettagli: conArgomenti(v.testo, v.materie[0]), durata: k === 1 ? 30 : verifica ? 60 : 45, compito: false,
       });
     }
   }
   for (let g = oggi; g <= ultimo; g = aggiungiGiorni(g, 1)) {
     if (giornoIso(g) !== 3) continue;
     for (const m of i.materieDeboli) {
-      sessioni.push({ base: `r${m}:${g}`, materia: m, cosa: "Ripasso (media sotto 6)", dettagli: conArgomenti("", m), voceId: null, giorni: [g], durata: 45 });
+      sessioni.push({ base: `r${m}:${g}`, materia: m, cosa: "Ripasso (media sotto 6)", dettagli: conArgomenti("", m), voceId: null, giorni: [g], durata: 45, compito: false });
     }
   }
 
@@ -115,7 +153,8 @@ export function pianifica(i: InputPiano): { blocchi: BloccoPiano[]; nonCiSta: st
   const nonCiSta: string[] = [];
   for (const s of sessioni) {
     if (i.chiaviTenute.has(s.base)) continue;
-    if (s.giorni.some((g) => i.tuoi.some((t) => t.giorno === g && stessaMateria(t.materia, s.materia)))) continue;
+    const coperta = (t: InputPiano["tuoi"][number]) => stessaMateria(t.materia, s.materia) && (!s.compito || copreCompito(t.testo, s.dettagli));
+    if (s.giorni.some((g) => i.tuoi.some((t) => t.giorno === g && coperta(t)))) continue;
     const tenuti = pezziTenuti(s.base);
     let messa = false;
     const tentativi = s.voceId !== null && s.base === `v${s.voceId}` ? [...s.giorni.map((g) => ({ g, sera: false })), { g: oggi, sera: true }]

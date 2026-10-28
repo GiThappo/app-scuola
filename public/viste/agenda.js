@@ -22,6 +22,22 @@ function voce(v) {
     </div>`;
 }
 
+/** Compiti e prove di domani: la prima cosa da vedere, con la spunta. */
+function perDomani(voci, promemoria, oggi) {
+  if (!voci.length && !promemoria.length) return "";
+  const righe = voci.map((v) => `
+    <div class="voce tipo-${esc(v.tipo)} ${v.fatto ? "fatto" : ""}">
+      <button class="spunta" data-fatto="${esc(v.id)}" data-valore="${v.fatto ? "0" : "1"}" aria-label="${v.fatto ? "Segna da fare" : "Segna fatto"}">${v.fatto ? "✓" : ""}</button>
+      <div class="corpo">
+        <b class="${v.nuova ? "nuovo" : ""}">${esc(v.materie.join(" / ") || "Materia?")}</b> <span class="tag ${esc(v.tipo)}">${esc(ETICHETTE[v.tipo] ?? v.tipo)}</span>
+        <div class="testo">${esc(v.testo)}</div>
+        ${v.tua ? `<div class="azioni"><button class="bottone piccolo" data-elimina="${esc(v.id)}">Elimina</button></div>` : ""}
+      </div>
+    </div>`).join("");
+  const chiedi = promemoria.map((m) => `<p class="nota">${esc(m)}: hai compiti? La prof non li scrive sul registro.</p>`).join("");
+  return `<section class="per-domani"><h2>Per ${esc(etichettaGiorno(domani(oggi), oggi).replace("Domani · ", ""))}</h2>${righe}${chiedi}</section>`;
+}
+
 export async function vistaAgenda(el) {
   const [stato, agenda, studio] = await Promise.all([api("/api/stato"), api("/api/agenda"), api("/api/studio")]);
   const oggi = stato.oggi;
@@ -30,10 +46,11 @@ export async function vistaAgenda(el) {
     ? `<p class="avviso">Ultimo aggiornamento non riuscito ${esc(daQuanto(stato.ultimo_tentativo))}: ${esc(stato.ultimo_errore)}.
        ${stato.ultimo_ok ? `Vedi i dati di ${esc(daQuanto(stato.ultimo_ok))}.` : ""}</p>`
     : "";
-  const promemoria = agenda.promemoria.map((m) => `<p class="avviso">${esc(m)} domani: hai compiti? La prof non li scrive sul registro.</p>`).join("");
+  const domaniVuoto = !agenda.per_domani.length && !agenda.promemoria.length
+    ? `<section class="per-domani vuota"><h2>Per ${esc(etichettaGiorno(domani(oggi), oggi).replace("Domani · ", ""))}</h2><p class="nota">Niente sul registro per domani.</p></section>` : "";
   const giorni = agenda.giorni.length
     ? agenda.giorni.map((g) => `<h2>${esc(etichettaGiorno(g.data, oggi))}</h2>${g.voci.map((v) => voce(v)).join("")}`).join("")
-    : `<p class="vuoto">Niente in programma nei prossimi 30 giorni.</p>`;
+    : `<p class="vuoto">Niente più avanti nei prossimi 30 giorni.</p>`;
   const daControllare = agenda.da_controllare.length
     ? `<h2>Data da controllare</h2>${agenda.da_controllare.map((v) => voce(v)).join("")}` : "";
   const senzaVoto = agenda.senza_voto.length
@@ -53,7 +70,7 @@ export async function vistaAgenda(el) {
       <div class="azioni"><button class="bottone primario piccolo">Aggiungi verifica</button><button class="bottone piccolo" type="button" id="annulla">Annulla</button></div>
       <p class="errore"></p>
     </form>
-    ${errore}${promemoria}${oggiDaStudiare(studio)}${giorni}${daControllare}${senzaVoto}`;
+    ${errore}${perDomani(agenda.per_domani, agenda.promemoria, oggi)}${domaniVuoto}${oggiDaStudiare(studio)}${giorni}${daControllare}${senzaVoto}`;
 
   const modulo = el.querySelector("#modulo-verifica");
   el.querySelector("#nuova").addEventListener("click", () => { modulo.hidden = false; modulo.querySelector("input").focus(); });
@@ -69,6 +86,13 @@ export async function vistaAgenda(el) {
       modulo.querySelector(".errore").textContent = err.message;
     }
   });
+  for (const b of el.querySelectorAll("[data-fatto]")) {
+    b.addEventListener("click", async () => {
+      b.disabled = true;
+      await api(`/api/agenda/${b.dataset.fatto}`, { method: "PATCH", body: JSON.stringify({ fatto: b.dataset.valore === "1" }) });
+      await vistaAgenda(el);
+    });
+  }
   for (const b of el.querySelectorAll("[data-elimina]")) {
     b.addEventListener("click", async () => {
       b.disabled = true;

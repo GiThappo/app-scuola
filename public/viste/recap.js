@@ -20,7 +20,7 @@ export async function vistaRecap(el, data) {
       <h1>Recap</h1>
       <div class="azioni">${freccia(elenco[i + 1], "‹", "Giorno prima")}${freccia(elenco[i - 1], "›", "Giorno dopo")}</div>
     </div>
-    <div class="sotto">${esc(etichettaGiorno(scelto, oggi))}</div>
+    <div class="sotto">${esc(etichettaGiorno(scelto, oggi))}${recap.automatico ? " · scritto dall'app, il tutor non l'ha ancora mandato" : ""}</div>
     <article class="recap">${recapHtml(recap.testo)}</article>
     <details class="eliminati"><summary>Tutti i recap (${elenco.length})</summary>
       <div class="lista">${elenco.map((r) => `<a class="voce" href="#/recap/${r.data}">${esc(etichettaGiorno(r.data, oggi))}</a>`).join("")}</div>

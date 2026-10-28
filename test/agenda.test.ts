@@ -11,6 +11,9 @@ test("parseOrario", () => {
   expect(orario.giorni[6][4]).toBe("Matematica");
   expect(orario.uscita[2]).toBe("14:15");
   expect(orario.senzaRegistro).toEqual(["Italiano"]);
+  expect(orario.giornata[3]).toBe("leggera");
+  expect(orario.giornata[6]).toBeUndefined(); // "—"
+  expect(orario.note.startsWith("## Come usarlo")).toBe(true);
 });
 
 test("nomeBreve", () => {

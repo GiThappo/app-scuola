@@ -5,6 +5,7 @@ import { vistaMateria } from "./viste/materia.js";
 import { vistaStudio } from "./viste/studio.js";
 import { vistaFile } from "./viste/file.js";
 import { vistaRecap } from "./viste/recap.js";
+import { vistaOrario } from "./viste/orario.js";
 
 const contenuto = document.getElementById("contenuto");
 const barra = document.getElementById("barra");
@@ -33,6 +34,7 @@ export async function mostra() {
     else if (sezione === "materie") await vistaMaterie(contenuto);
     else if (sezione === "file") await vistaFile(contenuto, decodeURIComponent(resto.join("/")));
     else if (sezione === "studio") await vistaStudio(contenuto);
+    else if (sezione === "orario") await vistaOrario(contenuto);
     else if (sezione === "recap") await vistaRecap(contenuto, resto[0]);
     else await vistaAgenda(contenuto);
   } catch (e) {

@@ -43,6 +43,13 @@ export function daQuanto(iso, now = new Date()) {
   return `il ${q.dm} alle ${q.ora}`;
 }
 
+/** Etichetta del blocco di studio: i compiti per domani si vedono subito. */
+export function etichettaBlocco(b, oggi) {
+  if (b.tipo === "COMPITO") return b.scadenza === piuUno(oggi) ? { testo: "PER DOMANI", classe: "DOMANI" } : { testo: "COMPITO", classe: "COMPITO" };
+  if (b.tipo === "INTERROGAZIONE") return { testo: "INTERROG.", classe: "INTERROGAZIONE" };
+  return { testo: b.tipo || "STUDIO", classe: b.tipo || "STUDIO" };
+}
+
 /** Classe per il colore della media: rosso sotto il 6, giallo fino al 7, verde dall'8. */
 export const classeMedia = (m) => (m == null ? "" : m < 6 ? "basso" : m < 7 ? "medio" : m >= 8 ? "alto" : "");
 /** Colore stabile per ogni materia, da 0 a 7, ricavato dal nome. */
@@ -61,4 +68,15 @@ export function recapHtml(testo) {
     if (!rientro && /^\d+\.\s/.test(r)) return `<h3>${pulita}</h3>`;
     return `<p class="r${Math.min(2, Math.floor(rientro / 3))}">${pulita}</p>`;
   }).join("");
+}
+
+/** Inizio di ogni ora di lezione, contando a ritroso dall'uscita (lezioni da 1 ora): "13:15", 5 → ["8:15", …, "12:15"]. */
+export function oreLezioni(uscita, n) {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(uscita ?? "");
+  if (!m) return Array(n).fill("");
+  const fine = Number(m[1]) * 60 + Number(m[2]);
+  return Array.from({ length: n }, (_, i) => {
+    const t = fine - (n - i) * 60;
+    return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`;
+  });
 }

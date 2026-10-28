@@ -8,6 +8,8 @@ export type VotoCV = {
   weightFactor: number | null;
   canceled: boolean;
   noAverage: boolean;
+  /** "blue" = non fa media */
+  color?: string;
   componentDesc: string;
   periodPos: number;
   periodLabel: string;
@@ -16,9 +18,12 @@ export type VotoCV = {
 
 const MODIFICATORI: Record<string, number> = { "+": 0.25, "-": -0.25, "½": 0.5, "1/2": 0.5 };
 
+/** Voto blu su Classeviva: si vede ma non entra nella media. */
+export const blu = (v: VotoCV) => v.color === "blue";
+
 /** Converte un voto in numero ("6+" -> 6.25, "6½" -> 6.5). null se non fa media. */
 export function valore(v: VotoCV): number | null {
-  if (v.canceled || v.noAverage) return null;
+  if (v.canceled || v.noAverage || blu(v)) return null;
   if (v.decimalValue != null) return v.decimalValue;
   const m = (v.displayValue ?? "").trim().match(/^(\d+)\s*(\+|-|½|1\/2)?$/);
   if (!m) return null;

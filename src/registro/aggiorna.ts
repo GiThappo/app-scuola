@@ -2,7 +2,7 @@ import { ErroreClasseviva, scaricaRegistro } from "../classeviva/client";
 import { classificaTipo, materieVoce, scadenza } from "./agenda";
 import { aggiungiGiorni, oggiRoma } from "./date";
 import { nomeBreve, parseOrario } from "./orario";
-import { valore } from "./voti";
+import { blu, valore } from "./voti";
 import { ripianifica } from "../studio/ripianifica";
 
 export type Env = {
@@ -52,10 +52,21 @@ export async function aggiorna(env: Env, now: Date, fetchFn: typeof fetch = fetc
     s.push(db.prepare(`DELETE FROM voti WHERE id NOT IN (SELECT value FROM json_each(?))`).bind(JSON.stringify(idVoti)));
     for (const v of dati.voti) {
       s.push(db.prepare(
-        `INSERT INTO voti (id, materia, data, voto, valore, peso, tipo, periodo, nota, visto_il) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `INSERT INTO voti (id, materia, data, voto, valore, peso, tipo, periodo, nota, visto_il, blu) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET materia = excluded.materia, data = excluded.data, voto = excluded.voto, valore = excluded.valore,
-           peso = excluded.peso, tipo = excluded.tipo, periodo = excluded.periodo, nota = excluded.nota`,
-      ).bind(v.evtId, nomeBreve(v.subjectDesc), v.evtDate, v.displayValue, valore(v), v.weightFactor ?? 1, v.componentDesc, v.periodPos, v.notesForFamily ?? "", adesso));
+           peso = excluded.peso, tipo = excluded.tipo, periodo = excluded.periodo, nota = excluded.nota, blu = excluded.blu`,
+      ).bind(v.evtId, nomeBreve(v.subjectDesc), v.evtDate, v.displayValue, valore(v), v.weightFactor ?? 1, v.componentDesc, v.periodPos, v.notesForFamily ?? "", adesso, blu(v) ? 1 : 0));
+    }
+
+    // Medie di Classeviva: se stavolta non sono arrivate restano quelle di prima
+    if (dati.medie) {
+      s.push(db.prepare("DELETE FROM medie"));
+      for (const m of Object.values(dati.medie.subjectAverages)) {
+        if (!m?.subjectDesc || MATERIE_ESCLUSE.has(m.subjectDesc)) continue;
+        const g = m.globalAverage ?? {};
+        s.push(db.prepare("INSERT OR REPLACE INTO medie (materia, media, n_voti) VALUES (?, ?, ?)")
+          .bind(nomeBreve(m.subjectDesc), typeof g.average === "number" ? g.average : null, Number(g.gradeCount) || 0));
+      }
     }
 
     // Agenda: si toglie solo ciò che è sparito nel periodo scaricato (le voci a mano hanno id negativo e restano)

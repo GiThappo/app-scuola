@@ -56,3 +56,18 @@ test("recapHtml", async () => {
     '<p class="r-titolo">REPORT DEL SABATO</p><h3>1. NOVITÀ &lt;DAL&gt; REGISTRO</h3><p class="r1">Nessuna novità</p>' +
     '<p class="r1">Storia: 9 · media 9.00 · =</p><p class="r2">14:45-16:00 · Italiano</p>');
 });
+
+test("oreLezioni", async () => {
+  const { oreLezioni } = await import("../public/formato.js");
+  expect(oreLezioni("13:15", 5)).toEqual(["8:15", "9:15", "10:15", "11:15", "12:15"]);
+  expect(oreLezioni("14:15", 6)[0]).toBe("8:15");
+  expect(oreLezioni(null, 5)).toEqual(["", "", "", "", ""]);
+});
+
+test("etichettaBlocco", async () => {
+  const { etichettaBlocco } = await import("../public/formato.js");
+  expect(etichettaBlocco({ tipo: "COMPITO", scadenza: "2026-10-29" }, "2026-10-28")).toEqual({ testo: "PER DOMANI", classe: "DOMANI" });
+  expect(etichettaBlocco({ tipo: "COMPITO", scadenza: "2026-10-30" }, "2026-10-28")).toEqual({ testo: "COMPITO", classe: "COMPITO" });
+  expect(etichettaBlocco({ tipo: "TUO", scadenza: null }, "2026-10-28")).toEqual({ testo: "TUO", classe: "TUO" });
+  expect(etichettaBlocco({ tipo: "INTERROGAZIONE", scadenza: "2026-10-30" }, "2026-10-28").testo).toBe("INTERROG.");
+});

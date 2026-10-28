@@ -20,10 +20,14 @@ export async function vistaMateria(el, nome) {
   const oggi = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Rome" }).format(new Date());
   const voti = m.voti.length
     ? m.voti.map((v) => `
-        <div class="voce"><div class="corpo">
-          <b class="${v.nuovo ? "nuovo" : ""}">${esc(v.voto)}</b> · ${esc(v.tipo)} · ${esc(data(v.data))}
-          ${v.nota ? `<div class="nota">${esc(v.nota)}</div>` : ""}
-        </div></div>`).join("")
+        <div class="voce ${v.blu ? "voto-blu" : ""}">
+          <span class="voto ${v.blu ? "blu" : classeMedia(v.valore)}">${esc(v.voto)}</span>
+          <div class="corpo">
+            <span class="${v.nuovo ? "nuovo" : ""}">${esc(v.tipo || "Voto")} · ${esc(data(v.data))}</span>
+            ${v.blu ? `<div class="nota">non fa media</div>` : ""}
+            ${v.nota ? `<div class="nota">${esc(v.nota)}</div>` : ""}
+          </div>
+        </div>`).join("")
     : `<p class="vuoto">Nessun voto.</p>`;
   const inArrivo = m.in_arrivo.length
     ? `<h2>In arrivo</h2>${m.in_arrivo.map((v) => `
@@ -44,5 +48,6 @@ export async function vistaMateria(el, nome) {
       <h1><a href="#/materie" aria-label="Indietro">‹</a> ${esc(m.nome)}</h1>
       <span class="media ${classeMedia(m.media)}">media ${m.media == null ? "—" : m.media.toFixed(2).replace(".", ",")}</span>
     </div>
+    <div class="sotto">${m.media_classeviva ? "Media di Classeviva" : "Media calcolata dall'app"}${m.voti.some((v) => v.blu) ? " · i voti blu non fanno media" : ""}</div>
     <h2>Voti</h2>${voti}${inArrivo}${materiale}<h2>Diario lezioni</h2>${lezioni}`;
 }

@@ -31,6 +31,8 @@ export type DatiRegistro = {
   lezioni: any[];
   calendario: any[];
   didattica: any[];
+  /** medie per materia calcolate da Classeviva; null se non sono arrivate */
+  medie: { subjectAverages: Record<string, any> } | null;
 };
 
 const ymd = (d: string) => d.replaceAll("-", "");
@@ -93,5 +95,10 @@ export async function scaricaRegistro(
   ]);
   // La sezione Didattica può essere disattivata dalla scuola: non è un errore
   const didattica = await get(`${s}/didactics`, "didacticts").catch(() => []);
-  return { voti, materie, periodi, agenda, lezioni, calendario, didattica };
+  // Le medie servono solo da mostrare: senza, l'app le calcola da sé
+  const medie = await fetchFn(`${REST}/${s}/avg`, { headers: { ...INTESTAZIONI, Cookie: cookie } })
+    .then(async (r) => (r.ok ? ((await r.json()) as any) : null))
+    .then((j) => (j?.subjectAverages && typeof j.subjectAverages === "object" ? j : null))
+    .catch(() => null);
+  return { voti, materie, periodi, agenda, lezioni, calendario, didattica, medie };
 }

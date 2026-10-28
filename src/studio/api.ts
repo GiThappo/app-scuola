@@ -28,11 +28,20 @@ const richiediToken: MiddlewareHandler<{ Bindings: Env }> = async (c, next) => {
   await next();
 };
 
-const bloccoApi = (b: RigaBlocco) => ({
-  id: b.id, materia: b.materia, cosa: b.cosa, dettagli: b.dettagli, voce_id: b.voce_id,
-  data: b.inizio.slice(0, 10), ora: b.inizio.slice(11), fine: piuMinuti(b.inizio, b.durata).slice(11), durata: b.durata,
-  fatto: !!b.fatto, tuo: !!b.manuale,
-});
+type Voce = { id: number; tipo: string; scadenza: string | null };
+
+/** COMPITO, VERIFICA o INTERROGAZIONE (dalla voce), RIPASSO (materia sotto il 6), TUO (aggiunto o spostato da te). */
+const tipoBlocco = (b: RigaBlocco, voce: Voce | undefined) =>
+  b.manuale ? "TUO" : voce ? voce.tipo : b.chiave?.startsWith("r") ? "RIPASSO" : "STUDIO";
+
+const bloccoApi = (b: RigaBlocco, voci: Map<number, Voce> = new Map()) => {
+  const voce = b.voce_id === null ? undefined : voci.get(b.voce_id);
+  return {
+    id: b.id, materia: b.materia, cosa: b.cosa, dettagli: b.dettagli, voce_id: b.voce_id,
+    data: b.inizio.slice(0, 10), ora: b.inizio.slice(11), fine: piuMinuti(b.inizio, b.durata).slice(11), durata: b.durata,
+    fatto: !!b.fatto, tuo: !!b.manuale, tipo: tipoBlocco(b, voce), scadenza: voce?.scadenza ?? null,
+  };
+};
 
 export function rotteStudio(app: Hono<{ Bindings: Env }>, now: () => Date) {
   const valore = async (db: D1Database, chiave: string) =>
@@ -42,14 +51,15 @@ export function rotteStudio(app: Hono<{ Bindings: Env }>, now: () => Date) {
     const db = c.env.DB;
     const oggi = localeRoma(now()).slice(0, 10);
     const blocchi = (await db.prepare("SELECT * FROM blocchi WHERE eliminato = 0 AND inizio >= ? ORDER BY inizio, id").bind(oggi).all<RigaBlocco>()).results;
+    const voci = new Map((await db.prepare("SELECT id, tipo, scadenza FROM agenda").all<Voce>()).results.map((v) => [v.id, v]));
     const giorni = new Map<string, ReturnType<typeof bloccoApi>[]>();
-    for (const b of blocchi.map(bloccoApi)) giorni.set(b.data, [...(giorni.get(b.data) ?? []), b]);
+    for (const b of blocchi.map((x) => bloccoApi(x, voci))) giorni.set(b.data, [...(giorni.get(b.data) ?? []), b]);
     const eliminati = (await db.prepare("SELECT * FROM blocchi WHERE eliminato = 1 AND inizio >= ? ORDER BY inizio, id").bind(oggi).all<RigaBlocco>()).results;
     const materie = (await db.prepare("SELECT DISTINCT materia FROM voti UNION SELECT DISTINCT materia FROM lezioni ORDER BY materia").all<{ materia: string }>()).results;
     return c.json({
       oggi,
       giorni: [...giorni].map(([data, blocchi]) => ({ data, blocchi })),
-      eliminati: eliminati.map(bloccoApi),
+      eliminati: eliminati.map((x) => bloccoApi(x, voci)),
       non_ci_sta: JSON.parse((await valore(db, "piano_non_ci_sta")) ?? "[]"),
       calendario: { ultimo_sync: await valore(db, "cal_ultimo_sync"), configurato: !!c.env.CALENDARIO_TOKEN },
       materie: materie.map((m) => m.materia),

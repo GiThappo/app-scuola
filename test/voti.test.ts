@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { valore, media, type VotoCV } from "../src/registro/voti";
+import { blu, valore, media, type VotoCV } from "../src/registro/voti";
 
 const v = (o: Partial<VotoCV>): VotoCV => ({
   evtId: 1, evtDate: "2026-10-10", subjectDesc: "STORIA", displayValue: "7", decimalValue: null, weightFactor: 1,
@@ -19,6 +19,10 @@ test("voti che non fanno media", () => {
   for (const d of ["g", "ns", "+", "7-8", "buono"]) expect(valore(v({ displayValue: d }))).toBeNull();
   expect(valore(v({ displayValue: "8", canceled: true }))).toBeNull();
   expect(valore(v({ displayValue: "8", noAverage: true }))).toBeNull();
+  // blu su Classeviva: si vede il voto ma non fa media (decimalValue vuoto)
+  expect(valore(v({ displayValue: "6", color: "blue" }))).toBeNull();
+  expect(blu(v({ displayValue: "6", color: "blue" }))).toBe(true);
+  expect(blu(v({ displayValue: "6", color: "green" }))).toBe(false);
 });
 
 test("media pesata", () => {

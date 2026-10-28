@@ -1,0 +1,9 @@
+{
+  "subjectAverages": {
+    "1": { "subjectId": 1, "subjectDesc": "INFORMATICA", "periodAverages": [], "globalAverage": { "periodPos": 0, "periodDesc": "Generale", "average": null, "color": "orange", "gradeCount": 0 } },
+    "2": { "subjectId": 2, "subjectDesc": "MATEMATICA E COMPLEMENTI DI MATEMATICA", "periodAverages": { "S1": { "periodPos": 1, "average": 6.75, "gradeCount": 2 } }, "globalAverage": { "periodPos": 0, "periodDesc": "Generale", "average": 6.75, "color": "green", "gradeCount": 2 } },
+    "3": { "subjectId": 3, "subjectDesc": "TECNOLOGIE E PROGETTAZIONE DI SISTEMI INFORMATICI E DI TELECOMUNICAZIONI", "periodAverages": { "S1": { "periodPos": 1, "average": 5.5, "gradeCount": 1 } }, "globalAverage": { "periodPos": 0, "periodDesc": "Generale", "average": 5.5, "color": "red", "gradeCount": 1 } },
+    "5": { "subjectId": 5, "subjectDesc": "SOSTEGNO", "periodAverages": [], "globalAverage": { "periodPos": 0, "average": null, "gradeCount": 0 } }
+  },
+  "generalAverages": { "S1": { "periodPos": 1, "average": 7.4, "subjectCount": 7 } }
+}

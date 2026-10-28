@@ -20,11 +20,15 @@ export async function ripianifica(db: D1Database, now: Date): Promise<void> {
   const oggi = adesso.slice(0, 10);
   const [imp, voci, senzaScuola, impegni, blocchi, deboli, lezioni] = await db.batch([
     db.prepare("SELECT valore FROM impostazioni WHERE chiave = 'orario_md'"),
-    db.prepare("SELECT id, materie, testo, tipo, scadenza FROM agenda WHERE scadenza > ? AND scadenza <= ?").bind(oggi, aggiungiGiorni(oggi, 14)),
+    db.prepare("SELECT id, materie, testo, tipo, scadenza FROM agenda WHERE fatto = 0 AND scadenza > ? AND scadenza <= ?").bind(oggi, aggiungiGiorni(oggi, 14)),
     db.prepare("SELECT data FROM giorni WHERE scuola = 0 AND data >= ?").bind(oggi),
     db.prepare("SELECT inizio, fine FROM impegni"),
     db.prepare("SELECT * FROM blocchi"),
-    db.prepare("SELECT materia FROM voti WHERE valore IS NOT NULL GROUP BY materia HAVING SUM(valore * peso) / SUM(peso) < 6 ORDER BY materia"),
+    // Media di Classeviva quando c'è, altrimenti calcolata dai voti
+    db.prepare(`SELECT materia FROM (
+        SELECT materia, media FROM medie
+        UNION ALL SELECT materia, SUM(valore * peso) / SUM(peso) FROM voti WHERE valore IS NOT NULL AND materia NOT IN (SELECT materia FROM medie) GROUP BY materia
+      ) WHERE media < 6 ORDER BY materia`),
     db.prepare("SELECT materia, argomento, MAX(data) AS d FROM lezioni WHERE data >= ? AND argomento != '' GROUP BY materia, argomento ORDER BY d DESC")
       .bind(aggiungiGiorni(oggi, -21)),
   ]);
@@ -49,7 +53,8 @@ export async function ripianifica(db: D1Database, now: Date): Promise<void> {
     chiaviTenute: new Set(tenuti.flatMap((b) => (b.chiave ? [b.chiave] : []))),
     materieDeboli: (deboli.results as { materia: string }[]).map((r) => r.materia),
     argomenti,
-    tuoi: tenuti.filter((b) => b.manuale && !b.eliminato && !b.chiave).map((b) => ({ giorno: b.inizio.slice(0, 10), materia: b.materia })),
+    tuoi: tenuti.filter((b) => b.manuale && !b.eliminato && !b.chiave)
+      .map((b) => ({ giorno: b.inizio.slice(0, 10), materia: b.materia, testo: `${b.cosa}\n${b.dettagli}` })),
   });
 
   const s: D1PreparedStatement[] = [];

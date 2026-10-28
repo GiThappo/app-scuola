@@ -144,6 +144,25 @@ test("sync: gli eventi del tutor diventano blocchi tuoi, una volta sola, e copro
   expect((await blocchi()).filter((b: any) => b.materia === "Matematica").length).toBe(1);
 });
 
+test("ogni blocco dice di che tipo è e per quando", async () => {
+  await sync();
+  await chiama("POST", "/api/studio", { materia: "Inglese", cosa: "Verbi", data: "2026-10-24", ora: "18:00", durata: 30 });
+  const tipi = (await blocchi()).map((b: any) => `${b.data} ${b.materia} ${b.tipo} ${b.scadenza}`);
+  expect(tipi).toContain("2026-10-26 Matematica COMPITO 2026-10-27");
+  expect(tipi).toContain("2026-10-30 Storia VERIFICA 2026-10-31");
+  expect(tipi).toContain("2026-10-24 Inglese TUO null");
+});
+
+test("compito fatto dall'agenda: anche i suoi blocchi sono fatti, e tornano da fare", async () => {
+  await sync();
+  const delCompito = async () => (await blocchi()).filter((b: any) => b.voce_id === 1);
+  expect((await delCompito()).length).toBeGreaterThan(0);
+  expect((await chiama("PATCH", "/api/agenda/1", { fatto: true })).stato).toBe(200);
+  expect((await delCompito()).every((b: any) => b.fatto)).toBe(true);
+  await chiama("PATCH", "/api/agenda/1", { fatto: false });
+  expect((await delCompito()).every((b: any) => !b.fatto)).toBe(true);
+});
+
 test("eliminato per sbaglio: si ripristina dov'era, anche quelli aggiunti a mano", async () => {
   await sync();
   const auto = (await blocchi()).find((b: any) => b.data === "2026-10-28");

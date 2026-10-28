@@ -1,5 +1,5 @@
 import { api, esc } from "../app.js";
-import { daQuanto, etichettaGiorno } from "../formato.js";
+import { daQuanto, etichettaGiorno, etichettaBlocco, tonoMateria } from "../formato.js";
 
 const DURATE = [15, 20, 30, 45, 60, 90, 120];
 const adessoRoma = () => new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Rome", dateStyle: "short", timeStyle: "short" }).format(new Date()).replace(" ", "T");
@@ -14,16 +14,29 @@ function campi({ data, ora, durata }) {
     <label>Durata <select name="durata">${opzioniDurata(durata)}</select></label>`;
 }
 
-function blocco(b, adesso) {
+// Righe aperte, così restano aperte quando la pagina si ricarica dopo un'azione
+const aperti = new Set();
+
+/** Una riga per blocco: materia, tipo e ora; toccandola si apre con cosa fare. */
+function blocco(b, adesso, oggi) {
   const passato = `${b.data}T${b.fine}` <= adesso && !b.fatto;
+  const tag = etichettaBlocco(b, oggi);
+  const materia = b.materia.split(" / ")[0];
   return `
-    <div class="voce blocco ${b.fatto ? "fatto" : ""} ${passato ? "passato" : ""}" data-id="${b.id}">
-      <div class="ora">${esc(b.ora)}<span>${esc(b.fine)}</span></div>
+    <details class="voce blocco ${b.fatto ? "fatto" : ""} ${passato ? "passato" : ""}" data-id="${b.id}" ${aperti.has(String(b.id)) ? "open" : ""}>
+      <summary>
+        <span class="iniziale piccola tono-${tonoMateria(materia)}">${esc(materia.charAt(0).toUpperCase())}</span>
+        <span class="nome">${esc(b.materia)}</span>
+        <span class="tag ${esc(tag.classe)}">${esc(tag.testo)}</span>
+        <span class="ora">${esc(b.ora)}</span>
+        <span class="freccia" aria-hidden="true">›</span>
+      </summary>
       <div class="corpo">
-        <b>${esc(b.materia)}</b>${b.tuo ? ` <span class="tag TUO">TUO</span>` : ""}
-        <div>${esc(b.cosa)}</div>
+        <div class="nota">${esc(b.ora)}–${esc(b.fine)} · ${esc(b.durata)} min${b.fatto ? " · fatto" : ""}</div>
+        <div class="cosa">${esc(b.cosa)}</div>
         ${b.dettagli ? `<div class="nota dettagli">${esc(b.dettagli)}</div>` : ""}
         <div class="azioni">
+          <a class="bottone piccolo primario" href="#/materie/${encodeURIComponent(materia)}">Vai alla materia ›</a>
           <button class="bottone piccolo" data-azione="fatto">${b.fatto ? "↺ Da fare" : "✓ Fatto"}</button>
           <button class="bottone piccolo" data-azione="sposta">Sposta</button>
           <button class="bottone piccolo" data-azione="elimina" aria-label="Elimina">✕</button>
@@ -33,7 +46,7 @@ function blocco(b, adesso) {
           <div class="azioni"><button class="bottone primario piccolo">Salva</button><button class="bottone piccolo" type="button" data-azione="annulla">Annulla</button></div>
         </form>
       </div>
-    </div>`;
+    </details>`;
 }
 
 /** Blocchi di oggi, per la cima dell'Agenda. */
@@ -57,7 +70,7 @@ export async function vistaStudio(el, { appenaEliminato = null } = {}) {
   const nonCiSta = s.non_ci_sta.length
     ? `<div class="avviso"><b>Non ci sta tutto.</b> Sposta qualcosa o anticipa:<ul>${s.non_ci_sta.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div>` : "";
   const giorni = s.giorni.length
-    ? s.giorni.map((g) => `<h2>${esc(etichettaGiorno(g.data, s.oggi))}</h2>${g.blocchi.map((b) => blocco(b, adesso)).join("")}`).join("")
+    ? s.giorni.map((g) => `<h2>${esc(etichettaGiorno(g.data, s.oggi))}</h2>${g.blocchi.map((b) => blocco(b, adesso, s.oggi)).join("")}`).join("")
     : `<p class="vuoto">Niente da studiare nei prossimi 14 giorni. Le verifiche e i compiti del registro compaiono qui da soli.</p>`;
 
   const eliminati = s.eliminati.length
@@ -87,6 +100,9 @@ export async function vistaStudio(el, { appenaEliminato = null } = {}) {
     ${nonCiSta}${giorni}${eliminati}
     <p class="nota">I blocchi che sposti o aggiungi diventano <b>tuoi</b>: il piano automatico non li tocca e organizza il resto intorno.</p>${toast}</div>`;
   const radice = el.querySelector("#studio");
+  for (const d of radice.querySelectorAll("details.blocco")) {
+    d.addEventListener("toggle", () => (d.open ? aperti.add(d.dataset.id) : aperti.delete(d.dataset.id)));
+  }
 
   const ricarica = (opzioni) => vistaStudio(el, opzioni);
   setTimeout(() => radice.querySelector(".toast")?.remove(), TOAST_MS);
@@ -103,11 +119,12 @@ export async function vistaStudio(el, { appenaEliminato = null } = {}) {
     const riga = bottone.closest("[data-id]");
     const azione = bottone.dataset.azione;
     if (azione === "annulla") { bottone.closest("form").hidden = true; return; }
-    if (azione === "sposta") { riga.querySelector("form").hidden = false; return; }
+    if (azione === "sposta") { riga.querySelector('[data-modulo="sposta"]').hidden = false; return; }
     bottone.disabled = true;
     if (azione === "fatto") await api(`/api/studio/${riga.dataset.id}`, { method: "PATCH", body: JSON.stringify({ fatto: !riga.classList.contains("fatto") }) });
     if (azione === "ripristina") await api(`/api/studio/${riga.dataset.id}/ripristina`, { method: "POST" });
     if (azione === "elimina") {
+      aperti.delete(riga.dataset.id);
       await api(`/api/studio/${riga.dataset.id}`, { method: "DELETE" });
       return ricarica({ appenaEliminato: riga.dataset.id });
     }
