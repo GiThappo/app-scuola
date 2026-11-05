@@ -1,0 +1,56 @@
+{
+ "agenda": [
+  {
+   "evtId": 1029,
+   "evtCode": "AGNT",
+   "evtDatetimeBegin": "2026-10-17T12:00:00+02:00",
+   "evtDatetimeEnd": "2026-10-17T13:00:00+02:00",
+   "isFullDay": false,
+   "notes": "Verifica scritta di matematica: equazioni, sistemi e problemi di primo grado",
+   "authorName": "Prof. J",
+   "classDesc": "1A ESEMPIO",
+   "subjectId": null,
+   "subjectDesc": null,
+   "homeworkId": null
+  },
+  {
+   "evtId": 1030,
+   "evtCode": "AGNT",
+   "evtDatetimeBegin": "2026-10-22T08:00:00+02:00",
+   "evtDatetimeEnd": "2026-10-22T09:00:00+02:00",
+   "isFullDay": false,
+   "notes": "Studiare la teoria a pag. 20, 21, es. pag. 30 n 1, 2, 3, 4, 5, 6, 7, 8, 9",
+   "authorName": "Prof. J",
+   "classDesc": "1A ESEMPIO",
+   "subjectId": null,
+   "subjectDesc": null,
+   "homeworkId": null
+  },
+  {
+   "evtId": 1031,
+   "evtCode": "AGNT",
+   "evtDatetimeBegin": "2026-10-22T00:00:00+02:00",
+   "evtDatetimeEnd": "2026-10-22T23:59:59+02:00",
+   "isFullDay": true,
+   "notes": "VERIFICA SCRITTA. STUDIARE DAL LIBRO DI TESTO DA PAG. 1 A PAG. 50",
+   "authorName": "Prof. F",
+   "classDesc": "1A ESEMPIO",
+   "subjectId": null,
+   "subjectDesc": null,
+   "homeworkId": null
+  },
+  {
+   "evtId": 1032,
+   "evtCode": "AGNT",
+   "evtDatetimeBegin": "2026-10-23T08:00:00+02:00",
+   "evtDatetimeEnd": "2026-10-23T09:00:00+02:00",
+   "isFullDay": false,
+   "notes": "Esercizi pag. 10 n 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11",
+   "authorName": "Prof. J",
+   "classDesc": "1A ESEMPIO",
+   "subjectId": null,
+   "subjectDesc": null,
+   "homeworkId": null
+  }
+ ]
+}

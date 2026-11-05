@@ -1,0 +1,196 @@
+{
+ "subjects": [
+  {
+   "id": 1000,
+   "description": "EDUCAZIONE CIVICA",
+   "order": 19,
+   "teachers": [
+    {
+     "teacherId": "A1001",
+     "teacherName": "Prof. A"
+    },
+    {
+     "teacherId": "A1002",
+     "teacherName": "Prof. B"
+    },
+    {
+     "teacherId": "A1003",
+     "teacherName": "Prof. C"
+    },
+    {
+     "teacherId": "A1004",
+     "teacherName": "Prof. D"
+    },
+    {
+     "teacherId": "A1005",
+     "teacherName": "Prof. E"
+    },
+    {
+     "teacherId": "A1006",
+     "teacherName": "Prof. F"
+    },
+    {
+     "teacherId": "A1007",
+     "teacherName": "Prof. G"
+    },
+    {
+     "teacherId": "A1008",
+     "teacherName": "Prof. H"
+    },
+    {
+     "teacherId": "A1009",
+     "teacherName": "Prof. I"
+    },
+    {
+     "teacherId": "A1010",
+     "teacherName": "Prof. J"
+    }
+   ]
+  },
+  {
+   "id": 1011,
+   "description": "FILOSOFIA",
+   "order": 28,
+   "teachers": [
+    {
+     "teacherId": "A1012",
+     "teacherName": "Prof. K"
+    },
+    {
+     "teacherId": "A1006",
+     "teacherName": "Prof. F"
+    }
+   ]
+  },
+  {
+   "id": 1013,
+   "description": "LINGUA E LETTERATURA ITALIANA",
+   "order": 48,
+   "teachers": [
+    {
+     "teacherId": "A1001",
+     "teacherName": "Prof. A"
+    }
+   ]
+  },
+  {
+   "id": 1014,
+   "description": "LINGUA INGLESE",
+   "order": 50,
+   "teachers": [
+    {
+     "teacherId": "A1002",
+     "teacherName": "Prof. B"
+    }
+   ]
+  },
+  {
+   "id": 1015,
+   "description": "SOSTEGNO",
+   "order": 50,
+   "teachers": [
+    {
+     "teacherId": "A1016",
+     "teacherName": "Prof. L"
+    },
+    {
+     "teacherId": "A1017",
+     "teacherName": "Prof. M"
+    },
+    {
+     "teacherId": "A1018",
+     "teacherName": "Prof. N"
+    }
+   ]
+  },
+  {
+   "id": 1019,
+   "description": "MATEMATICA E COMPLEMENTI DI MATEMATICA",
+   "order": 55,
+   "teachers": [
+    {
+     "teacherId": "A1010",
+     "teacherName": "Prof. J"
+    }
+   ]
+  },
+  {
+   "id": 1020,
+   "description": "RELIGIONE CATTOLICA  O ATTIVITA' ALTERNATIVE",
+   "order": 58,
+   "teachers": [
+    {
+     "teacherId": "A1009",
+     "teacherName": "Prof. I"
+    }
+   ]
+  },
+  {
+   "id": 1021,
+   "description": "SCIENZE MOTORIE E SPORTIVE",
+   "order": 72,
+   "teachers": [
+    {
+     "teacherId": "A1007",
+     "teacherName": "Prof. G"
+    }
+   ]
+  },
+  {
+   "id": 1022,
+   "description": "ARTE",
+   "order": 81,
+   "teachers": [
+    {
+     "teacherId": "A1008",
+     "teacherName": "Prof. H"
+    },
+    {
+     "teacherId": "A1023",
+     "teacherName": "Prof. O"
+    }
+   ]
+  },
+  {
+   "id": 1024,
+   "description": "STORIA",
+   "order": 85,
+   "teachers": [
+    {
+     "teacherId": "A1005",
+     "teacherName": "Prof. E"
+    }
+   ]
+  },
+  {
+   "id": 1025,
+   "description": "FISICA",
+   "order": 89,
+   "teachers": [
+    {
+     "teacherId": "A1004",
+     "teacherName": "Prof. D"
+    },
+    {
+     "teacherId": "A1026",
+     "teacherName": "Prof. P"
+    }
+   ]
+  },
+  {
+   "id": 1027,
+   "description": "SCIENZE",
+   "order": 94,
+   "teachers": [
+    {
+     "teacherId": "A1028",
+     "teacherName": "Prof. Q"
+    },
+    {
+     "teacherId": "A1003",
+     "teacherName": "Prof. C"
+    }
+   ]
+  }
+ ]
+}

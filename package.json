@@ -1,0 +1,21 @@
+{
+  "name": "app-scuola",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "hono": "^4.13.13"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "^1.4.7",
+    "@cloudflare/workers-types": "^5.20261023.1",
+    "@vitest/runner": "^4.1.12",
+    "@vitest/snapshot": "^4.1.12",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.12",
+    "wrangler": "^4.152.0"
+  }
+}
