@@ -9,6 +9,7 @@ import { materialeDi, rotteMateriale } from "./materiale/api";
 import { rotteStudio } from "./studio/api";
 import { ripianifica } from "./studio/ripianifica";
 import { intestazioniSicurezza } from "./sicurezza";
+import { applicaMigrazioni } from "./migrazioni";
 
 type Opzioni = { now?: () => Date; fetchFn?: typeof fetch };
 
@@ -31,6 +32,20 @@ function mediaRighe(voti: RigaVoto[]): number | null {
 export function creaApp({ now = () => new Date(), fetchFn }: Opzioni = {}) {
   const app = new Hono<{ Bindings: Env }>();
   app.use("*", intestazioniSicurezza);
+  // Una volta per ogni avvio del Worker; se fallisce riprova alla richiesta dopo
+  let tabellePronte = false;
+  app.use("*", async (c, next) => {
+    if (!tabellePronte) {
+      try {
+        await applicaMigrazioni(c.env.DB);
+        tabellePronte = true;
+      } catch (e) {
+        console.error("migrazioni", e instanceof Error ? e.message : e);
+        return c.json({ errore: "L'app non riesce a preparare i suoi dati. Riprova tra qualche minuto" }, 503);
+      }
+    }
+    await next();
+  });
   app.route("/", rotteAuth);
   app.use("/api/*", richiediLogin);
 
