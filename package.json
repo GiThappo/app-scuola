@@ -4,7 +4,15 @@
   "type": "module",
   "scripts": {
     "test": "vitest run",
-    "deploy": "wrangler deploy"
+    "db:migrations:apply": "wrangler d1 migrations apply DB --remote",
+    "deploy": "npm run db:migrations:apply && wrangler deploy"
+  },
+  "cloudflare": {
+    "bindings": {
+      "APP_PASSWORD": {
+        "description": "Inventa una password per aprire questa app. Non usare quella di Classeviva."
+      }
+    }
   },
   "dependencies": {
     "hono": "^4.13.13"

@@ -6,6 +6,7 @@ import { vistaStudio } from "./viste/studio.js";
 import { vistaFile } from "./viste/file.js";
 import { vistaRecap } from "./viste/recap.js";
 import { vistaOrario } from "./viste/orario.js";
+import { vistaClasseviva } from "./viste/classeviva.js";
 
 const contenuto = document.getElementById("contenuto");
 const barra = document.getElementById("barra");
@@ -15,7 +16,9 @@ export class NonLoggato extends Error {}
 /** Chiamata alle API. Se la sessione manca mostra il login. */
 export async function api(percorso, opzioni = {}) {
   const headers = opzioni.body ? { "Content-Type": "application/json" } : {};
-  const r = await fetch(percorso, { credentials: "same-origin", headers, ...opzioni });
+  const r = await fetch(percorso, { credentials: "same-origin", headers, ...opzioni }).catch(() => {
+    throw new Error("Non riesco a collegarmi all'app: controlla la connessione e riprova");
+  });
   if (r.status === 401 && percorso !== "/api/login") throw new NonLoggato();
   const dati = await r.json().catch(() => ({}));
   if (!r.ok) throw Object.assign(new Error(dati.errore || `Errore ${r.status}`), { stato: r.status });
@@ -35,6 +38,7 @@ export async function mostra() {
     else if (sezione === "file") await vistaFile(contenuto, decodeURIComponent(resto.join("/")));
     else if (sezione === "studio") await vistaStudio(contenuto);
     else if (sezione === "orario") await vistaOrario(contenuto);
+    else if (sezione === "classeviva") await vistaClasseviva(contenuto);
     else if (sezione === "recap") await vistaRecap(contenuto, resto[0]);
     else await vistaAgenda(contenuto);
   } catch (e) {

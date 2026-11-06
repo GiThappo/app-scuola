@@ -1,5 +1,5 @@
 import { api, esc } from "../app.js";
-import { daQuanto, etichettaGiorno } from "../formato.js";
+import { daQuanto, etichettaGiorno, messaggiVuoto } from "../formato.js";
 import { oggiDaStudiare } from "./studio.js";
 
 const ETICHETTE = { VERIFICA: "VERIFICA", INTERROGAZIONE: "INTERROGAZIONE", COMPITO: "COMPITO" };
@@ -38,19 +38,37 @@ function perDomani(voci, promemoria, oggi) {
   return `<section class="per-domani"><h2>Per ${esc(etichettaGiorno(domani(oggi), oggi).replace("Domani · ", ""))}</h2>${righe}${chiedi}</section>`;
 }
 
+const homeFatta = () => { try { return localStorage.getItem("home-fatta") === "1"; } catch { return false; } };
+
+/** La guida del primo avvio: sparisce da sola man mano che i passi sono fatti. */
+function primiPassi(stato) {
+  const installata = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+  const passi = [
+    stato.classeviva !== "ok" || !stato.ultimo_ok ? `<li><a href="#/classeviva">Collega Classeviva</a>, così l'app scarica voti e compiti.</li>` : "",
+    !stato.ha_orario ? `<li><a href="#/orario">Controlla il tuo orario</a>, così l'app organizza lo studio.</li>` : "",
+    !installata && !homeFatta() ? `<li>
+        Mettila sulla schermata Home. <b>iPhone:</b> apri in Safari, tocca Condividi, poi "Aggiungi alla schermata Home". <b>Android:</b> apri in Chrome, tocca il menu ⋮, poi "Aggiungi a schermata Home".
+        <div class="azioni"><button class="bottone piccolo" id="home-fatta">Fatto</button></div>
+      </li>` : "",
+  ].filter(Boolean);
+  return passi.length ? `<section class="voce primi-passi"><div class="corpo"><h2>Per iniziare</h2><ol>${passi.join("")}</ol></div></section>` : "";
+}
+
 export async function vistaAgenda(el) {
   const [stato, agenda, studio] = await Promise.all([api("/api/stato"), api("/api/agenda"), api("/api/studio")]);
   const oggi = stato.oggi;
   const ultimo = stato.ultimo_ok ? `Aggiornato ${daQuanto(stato.ultimo_ok)}` : "Mai aggiornato";
   const errore = stato.ultimo_errore
     ? `<p class="avviso">Ultimo aggiornamento non riuscito ${esc(daQuanto(stato.ultimo_tentativo))}: ${esc(stato.ultimo_errore)}.
-       ${stato.ultimo_ok ? `Vedi i dati di ${esc(daQuanto(stato.ultimo_ok))}.` : ""}</p>`
+       ${stato.ultimo_ok ? `Stai vedendo i dati dell'ultimo controllo riuscito (${esc(daQuanto(stato.ultimo_ok))}).` : ""}
+       ${stato.classeviva === "rifiutata" ? `<a href="#/classeviva">Correggi nome utente e password</a>` : ""}</p>`
     : "";
+  const vuoto = messaggiVuoto(stato);
   const domaniVuoto = !agenda.per_domani.length && !agenda.promemoria.length
-    ? `<section class="per-domani vuota"><h2>Per ${esc(etichettaGiorno(domani(oggi), oggi).replace("Domani · ", ""))}</h2><p class="nota">Niente sul registro per domani.</p></section>` : "";
+    ? `<section class="per-domani vuota"><h2>Per ${esc(etichettaGiorno(domani(oggi), oggi).replace("Domani · ", ""))}</h2><p class="nota">${esc(vuoto.domani)}</p></section>` : "";
   const giorni = agenda.giorni.length
     ? agenda.giorni.map((g) => `<h2>${esc(etichettaGiorno(g.data, oggi))}</h2>${g.voci.map((v) => voce(v)).join("")}`).join("")
-    : `<p class="vuoto">Niente più avanti nei prossimi 30 giorni.</p>`;
+    : `<p class="vuoto">${esc(vuoto.avanti)}</p>`;
   const daControllare = agenda.da_controllare.length
     ? `<h2>Data da controllare</h2>${agenda.da_controllare.map((v) => voce(v)).join("")}` : "";
   const senzaVoto = agenda.senza_voto.length
@@ -70,8 +88,12 @@ export async function vistaAgenda(el) {
       <div class="azioni"><button class="bottone primario piccolo">Aggiungi verifica</button><button class="bottone piccolo" type="button" id="annulla">Annulla</button></div>
       <p class="errore"></p>
     </form>
-    ${errore}${perDomani(agenda.per_domani, agenda.promemoria, oggi)}${domaniVuoto}${oggiDaStudiare(studio)}${giorni}${daControllare}${senzaVoto}`;
+    ${primiPassi(stato)}${stato.classeviva === "mancante" ? "" : errore}${perDomani(agenda.per_domani, agenda.promemoria, oggi)}${domaniVuoto}${oggiDaStudiare(studio)}${giorni}${daControllare}${senzaVoto}`;
 
+  el.querySelector("#home-fatta")?.addEventListener("click", () => {
+    try { localStorage.setItem("home-fatta", "1"); } catch { /* senza memoria il passo riappare: non è grave */ }
+    vistaAgenda(el);
+  });
   const modulo = el.querySelector("#modulo-verifica");
   el.querySelector("#nuova").addEventListener("click", () => { modulo.hidden = false; modulo.querySelector("input").focus(); });
   el.querySelector("#annulla").addEventListener("click", () => { modulo.hidden = true; });
@@ -113,7 +135,8 @@ export async function vistaAgenda(el) {
     await vistaAgenda(el);
   };
   bottone.addEventListener("click", aggiorna);
-  if (!stato.ultimo_ok || Date.now() - Date.parse(stato.ultimo_ok) > UN_ORA) {
+  // Con una password rifiutata o senza account non si riprova da soli: solo con il tasto Aggiorna
+  if (stato.classeviva === "ok" && (!stato.ultimo_ok || Date.now() - Date.parse(stato.ultimo_ok) > UN_ORA)) {
     if (!stato.ultimo_tentativo || Date.now() - Date.parse(stato.ultimo_tentativo) > 60 * 1000) aggiorna();
   }
 }

@@ -14,6 +14,23 @@ Gira gratis su [Cloudflare Workers](https://workers.cloudflare.com/) (piano grat
 
 Fa parte di [tutor-scolastico](https://github.com/GiThappo/tutor-scolastico), le skill di Claude Code per lo stesso scopo. L'app però funziona anche senza Claude.
 
+## Il modo più semplice
+
+[![Installa su Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/GiThappo/app-scuola)
+
+Non serve il terminale. Ti servono un account GitHub e uno Cloudflare, entrambi gratuiti.
+
+1. Clicca il pulsante e accedi a Cloudflare.
+2. Se Cloudflare chiede di collegare GitHub, autorizza. Se poi finisci su una pagina generica, torna qui e clicca di nuovo il pulsante.
+3. Scegli il tuo account GitHub e spunta **Create private Git repository**.
+4. In `APP_PASSWORD` inventa una password per aprire l'app, diversa da quella di Classeviva. Lascia il resto com'è e clicca **Distribuisci**.
+5. Aspetta un paio di minuti: la preparazione può sembrare ferma. A lavoro finito, apri l'indirizzo che termina con `.workers.dev` dalla pagina del progetto su Cloudflare, senza copiarlo da un registro tradotto.
+6. Entra con la tua password e segui **Per iniziare**: colleghi Classeviva, controlli l'orario e metti l'app sulla schermata Home.
+
+## Installazione a mano
+
+Serve solo se preferisci il terminale.
+
 ## Cosa serve
 
 - Un account gratuito su [Cloudflare](https://dash.cloudflare.com/sign-up).
@@ -58,8 +75,8 @@ npx wrangler deploy
 Servono tre segreti. Restano cifrati su Cloudflare e non finiscono mai nel codice.
 
 ```bash
-npx wrangler secret put CLASSEVIVA_UTENTE      # ti chiede il nome utente di Classeviva
-npx wrangler secret put CLASSEVIVA_PASSWORD    # ti chiede la password di Classeviva
+npx wrangler secret put CLASSEVIVA_UTENTE      # facoltativo: puoi inserirlo anche dall'app
+npx wrangler secret put CLASSEVIVA_PASSWORD    # facoltativo: puoi inserirla anche dall'app
 ```
 
 Poi scegli la **password dell'app**, quella che metterai sul telefono per entrare. Su Cloudflare non va la password ma una sua impronta (hash):
@@ -72,7 +89,9 @@ unset PASSWORD
 
 ### 5. Il tuo orario
 
-L'app usa l'orario per capire quando scadono i compiti e quando c'è ogni materia. Copia l'esempio, cambialo e caricalo:
+L'app usa l'orario per capire quando scadono i compiti e quando c'è ogni materia. Il modo più semplice è inserirlo dall'app: apri la scheda **Orario**, controlla la proposta ricostruita dal registro (se ci sono già lezioni scaricate) e premi **Salva orario**. Per cambiarlo in seguito usa **Modifica**.
+
+Le regole per lo studio si scrivono invece nel file. Se vuoi usarle, copia l'esempio, cambialo e caricalo:
 
 ```bash
 cp test/fixtures/orario.md orario.md
@@ -85,7 +104,7 @@ Il formato:
 - sotto, le **regole** per pianificare in parole tue (es. "il mercoledì recupero le materie indietro");
 - una sezione **`## Materie che non usano il registro`** con le materie i cui prof non scrivono i compiti: l'app ti ricorda di chiederli il giorno prima.
 
-Se cambi orario, modifica il file e rilancia `scripts/carica-orario.sh orario.md`.
+Se dopo modifichi il file, rilancia `scripts/carica-orario.sh orario.md`: questo sostituisce anche le modifiche fatte dall'app. Salvare dall'app, invece, lascia intatti titolo e regole.
 
 Fatto: apri l'indirizzo dal telefono, metti la password e aggiungi la pagina alla schermata Home.
 
@@ -162,5 +181,7 @@ I dati di prova in `test/fixtures/` sono **inventati**, con la stessa struttura 
 ## Sicurezza
 
 - La password dell'app è salvata solo come hash PBKDF2. Dopo troppi tentativi sbagliati il login si blocca per un po'.
-- Le credenziali di Classeviva sono segreti di Cloudflare: non stanno nel codice né nel database.
+- Le credenziali di Classeviva inserite dall'app stanno nel database, cifrate con una chiave ricavata da un segreto di Cloudflare: una copia del database da sola non basta a leggerle. Chi entra nel tuo account Cloudflare può invece arrivarci, quindi proteggilo con la verifica in due passaggi.
+- Se Classeviva rifiuta la password, l'app non riprova da sola, per non far bloccare l'account: riprova quando la correggi o premi **Aggiorna**.
+- `APP_PASSWORD` è salvata come segreto di Cloudflare; chi la vuole solo come impronta può usare `APP_PASSWORD_HASH`, che ha la precedenza.
 - Il token del calendario serve solo allo script di Google e si confronta in tempo costante.

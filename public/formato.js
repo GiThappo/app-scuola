@@ -43,6 +43,44 @@ export function daQuanto(iso, now = new Date()) {
   return `il ${q.dm} alle ${q.ora}`;
 }
 
+/**
+ * Testi delle liste vuote. Una lista vuota vuol dire "non c'è niente" solo se il registro è stato controllato:
+ * mai scaricato → non lo sappiamo; ultimo aggiornamento fallito → valeva all'ultimo controllo riuscito.
+ */
+export function messaggiVuoto({ ultimo_ok, ultimo_errore }, now = new Date()) {
+  if (!ultimo_ok) {
+    const perche = "il registro non è ancora stato scaricato.";
+    return {
+      domani: `Non so ancora cosa c'è per domani: ${perche}`,
+      avanti: `Non so ancora cosa c'è nei prossimi giorni: ${perche}`,
+      studio: `Non so ancora cosa c'è da studiare: ${perche}`,
+    };
+  }
+  if (ultimo_errore) {
+    const allora = `all'ultimo controllo riuscito (${daQuanto(ultimo_ok, now)}), ma potrebbe essere cambiato qualcosa.`;
+    return {
+      domani: `Niente per domani ${allora}`,
+      avanti: `Niente nei prossimi giorni ${allora}`,
+      studio: `Niente da studiare ${allora}`,
+    };
+  }
+  return {
+    domani: "Niente sul registro per domani.",
+    avanti: "Niente più avanti nei prossimi 30 giorni.",
+    studio: "Niente da studiare nei prossimi 14 giorni. Le verifiche e i compiti del registro compaiono qui da soli.",
+  };
+}
+
+export const PREFISSO_TELEFONO = "dal telefono ";
+
+/** Dove salvare un file caricato dall'app. Data e ora evitano che "image.jpg" sostituisca la foto precedente; il prefisso lo protegge dalla sincronizzazione dal PC. */
+export function percorsoCaricamento(materia, nome, adesso = new Date()) {
+  const pulito = (s) => s.replace(/[/\\]/g, " ").trim();
+  const r = roma(adesso);
+  const secondi = String(adesso.getUTCSeconds()).padStart(2, "0");
+  return `${pulito(materia)}/appunti/${PREFISSO_TELEFONO}${r.giorno} ${r.ora.replace(":", ".")}.${secondi} ${pulito(nome)}`;
+}
+
 /** Etichetta del blocco di studio: i compiti per domani si vedono subito. */
 export function etichettaBlocco(b, oggi) {
   if (b.tipo === "COMPITO") return b.scadenza === piuUno(oggi) ? { testo: "PER DOMANI", classe: "DOMANI" } : { testo: "COMPITO", classe: "COMPITO" };

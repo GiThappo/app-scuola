@@ -75,10 +75,35 @@ test("logout", async () => {
   expect((await chiama("/api/agenda", { headers: { Cookie: cookie } })).status).toBe(401);
 });
 
+test("APP_PASSWORD dal modulo di installazione: entra solo con quella giusta", async () => {
+  const salvato = ENV;
+  ENV = { ...E, APP_PASSWORD_HASH: undefined, APP_PASSWORD: PW };
+  try {
+    expect((await login("no")).status).toBe(401);
+    expect((await login(PW)).status).toBe(200);
+  } finally {
+    ENV = salvato;
+  }
+});
+
+test("se ci sono entrambe vale l'impronta; senza nessuna non entra nessuno", async () => {
+  const salvato = ENV;
+  try {
+    ENV = { ...salvato, APP_PASSWORD: "altra password" };
+    expect((await login("altra password")).status).toBe(401);
+    expect((await login(PW)).status).toBe(200);
+    ENV = { ...E, APP_PASSWORD_HASH: undefined, APP_PASSWORD: undefined };
+    expect((await login(PW)).status).toBe(401);
+  } finally {
+    ENV = salvato;
+  }
+});
+
 test("nessuna risposta contiene segreti", () => {
   expect(corpi.length).toBeGreaterThan(5);
   for (const c of corpi) {
-    expect(c).not.toContain(E.CLASSEVIVA_PASSWORD);
-    expect(c).not.toContain(ENV.APP_PASSWORD_HASH);
+    expect(c).not.toContain(E.CLASSEVIVA_PASSWORD!);
+    expect(c).not.toContain(ENV.APP_PASSWORD_HASH!);
+    expect(c).not.toContain(PW);
   }
 });

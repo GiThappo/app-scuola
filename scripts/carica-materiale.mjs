@@ -118,6 +118,8 @@ for (const { percorso, completo } of locali) {
 }
 for (const percorso of online.keys()) {
   if (locali.some((f) => f.percorso === percorso)) continue;
+  // Caricati dal telefono: sul PC non ci sono mai, quindi non vanno tolti
+  if (percorso.split("/").pop().startsWith("dal telefono ")) continue;
   if (await azione(`✗ ${percorso} (non c'è più sul PC)`, () => chiama("DELETE", urlFile(percorso)))) fatto.tolti++;
 }
 

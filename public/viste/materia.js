@@ -1,11 +1,20 @@
 import { api, esc } from "../app.js";
-import { classeMedia, etichettaGiorno } from "../formato.js";
+import { classeMedia, etichettaGiorno, percorsoCaricamento, PREFISSO_TELEFONO } from "../formato.js";
 import { dentroApp, titoloFile, urlFile } from "./file.js";
 
 const data = (d) => d.split("-").reverse().slice(0, 2).join("/");
 const peso = (n) => (n < 1e6 ? `${Math.max(1, Math.round(n / 1e3))} kB` : `${(n / 1e6).toFixed(1).replace(".", ",")} MB`);
 
+const MAX_FILE = 25_000_000;
+
 function voceFile(f) {
+  const voce = voceSemplice(f);
+  return f.nome.startsWith(PREFISSO_TELEFONO)
+    ? `<div class="file-telefono">${voce}<button class="bottone piccolo" data-elimina="${esc(f.percorso)}">Elimina</button></div>`
+    : voce;
+}
+
+function voceSemplice(f) {
   const est = f.nome.split(".").pop().toUpperCase();
   return dentroApp(f)
     ? `<a class="voce" href="#/file/${encodeURIComponent(f.percorso)}"><span class="tipo-file">${f.nome.endsWith(".md") ? "MD" : "TXT"}</span><div class="corpo">${esc(titoloFile(f.nome))}</div></a>`
@@ -49,5 +58,48 @@ export async function vistaMateria(el, nome) {
       <span class="media ${classeMedia(m.media)}">media ${m.media == null ? "—" : m.media.toFixed(2).replace(".", ",")}</span>
     </div>
     <div class="sotto">${m.media_classeviva ? "Media di Classeviva" : "Media calcolata dall'app"}${m.voti.some((v) => v.blu) ? " · i voti blu non fanno media" : ""}</div>
-    <h2>Voti</h2>${voti}${inArrivo}${materiale}<h2>Diario lezioni</h2>${lezioni}`;
+    <h2>Voti</h2>${voti}${inArrivo}${materiale}
+    <div class="carica-appunti">
+      <label class="bottone">＋ Aggiungi appunti<input type="file" id="carica" accept=".pdf,.txt,.md,image/jpeg,image/png,image/webp"></label>
+      <p class="errore" role="alert"></p>
+    </div>
+    <h2>Diario lezioni</h2>${lezioni}`;
+
+  const errore = el.querySelector(".carica-appunti .errore");
+  el.querySelector("#carica").addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    errore.textContent = "";
+    if (file.size > MAX_FILE) {
+      errore.textContent = "Il file è troppo grande: il massimo è 25 MB.";
+      return;
+    }
+    const etichetta = e.target.parentElement;
+    etichetta.firstChild.textContent = "Carico…";
+    try {
+      await api(urlFile(percorsoCaricamento(m.nome, file.name)), { method: "PUT", body: file, headers: { "Content-Type": "application/octet-stream" } });
+      await vistaMateria(el, nome);
+    } catch (err) {
+      etichetta.firstChild.textContent = "＋ Aggiungi appunti";
+      errore.textContent = err.stato === 400 ? "Questo tipo di file non si può caricare: usa una foto JPG o PNG, un PDF o un testo." : err.message;
+    }
+  });
+  // Elimina in due tocchi: niente finestre di conferma del browser
+  for (const b of el.querySelectorAll("[data-elimina]")) {
+    b.addEventListener("click", async () => {
+      if (b.textContent !== "Sicuro?") {
+        b.textContent = "Sicuro?";
+        return;
+      }
+      b.disabled = true;
+      try {
+        await api(urlFile(b.dataset.elimina), { method: "DELETE" });
+        await vistaMateria(el, nome);
+      } catch (err) {
+        b.disabled = false;
+        b.textContent = "Elimina";
+        errore.textContent = err.message;
+      }
+    });
+  }
 }

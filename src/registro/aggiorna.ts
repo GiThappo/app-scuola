@@ -1,4 +1,5 @@
-import { ErroreClasseviva, scaricaRegistro } from "../classeviva/client";
+import { credenzialiRifiutate, ErroreClasseviva, scaricaRegistro } from "../classeviva/client";
+import { leggiCredenziali } from "./credenziali";
 import { classificaTipo, materieVoce, scadenza } from "./agenda";
 import { aggiungiGiorni, oggiRoma } from "./date";
 import { nomeBreve, parseOrario } from "./orario";
@@ -7,9 +8,13 @@ import { ripianifica } from "../studio/ripianifica";
 
 export type Env = {
   DB: D1Database;
-  CLASSEVIVA_UTENTE: string;
-  CLASSEVIVA_PASSWORD: string;
-  APP_PASSWORD_HASH: string;
+  /** facoltativi: di solito si inseriscono dall'app e restano cifrati nel database */
+  CLASSEVIVA_UTENTE?: string;
+  CLASSEVIVA_PASSWORD?: string;
+  /** impronta della password dell'app: se c'è, vale questa */
+  APP_PASSWORD_HASH?: string;
+  /** password dell'app inserita nel modulo di installazione di Cloudflare */
+  APP_PASSWORD?: string;
   /** token dello script di Google Calendar */
   CALENDARIO_TOKEN?: string;
   ASSETS: Fetcher;
@@ -19,14 +24,35 @@ export type Env = {
 const MATERIE_ESCLUSE = new Set(["SOSTEGNO", "SUPPLENZA"]);
 const IN_CORSO_MAX_MS = 2 * 60 * 1000;
 
+const CREDENZIALI_MANCANTI = "Collega Classeviva per scaricare il registro";
+
+/** Il messaggio che vede lo studente: niente codici tecnici, che restano nei log. */
+export function messaggioErrore(e: unknown): string {
+  if (credenzialiRifiutate(e)) return (e as Error).message;
+  return e instanceof ErroreClasseviva
+    ? "Classeviva non risponde come dovrebbe. Riprovo da solo più tardi"
+    : "Non riesco a collegarmi a Classeviva. Riprovo da solo più tardi";
+}
+
 const salvaImpostazione = (db: D1Database, chiave: string, v: string | null) =>
   db.prepare("INSERT INTO impostazioni (chiave, valore) VALUES (?, ?) ON CONFLICT(chiave) DO UPDATE SET valore = excluded.valore").bind(chiave, v);
 
 /** Scarica il registro e lo salva in D1. Se qualcosa va storto, i dati di prima restano. */
-export async function aggiorna(env: Env, now: Date, fetchFn: typeof fetch = fetch): Promise<{ ok: boolean; errore?: string; inCorso?: boolean }> {
+export async function aggiorna(env: Env, now: Date, fetchFn: typeof fetch = fetch, { forza = false } = {}): Promise<{ ok: boolean; errore?: string; inCorso?: boolean }> {
   const db = env.DB;
   const adesso = now.toISOString();
   const oggi = oggiRoma(now);
+  const credenziali = await leggiCredenziali(env);
+  if (!credenziali) {
+    await db.batch([salvaImpostazione(db, "ultimo_tentativo", adesso), salvaImpostazione(db, "ultimo_errore", CREDENZIALI_MANCANTI)]);
+    return { ok: false, errore: CREDENZIALI_MANCANTI };
+  }
+  // Riprovare da soli una password rifiutata può far bloccare l'account: si riprova solo se lo chiede lo studente
+  if (!forza) {
+    const rifiutate = await db.prepare("SELECT chiave, valore FROM impostazioni WHERE chiave IN ('credenziali_rifiutate', 'ultimo_errore')").all<{ chiave: string; valore: string | null }>();
+    const valore = (k: string) => rifiutate.results.find((r) => r.chiave === k)?.valore;
+    if (valore("credenziali_rifiutate")) return { ok: false, errore: valore("ultimo_errore") ?? "Classeviva non accetta nome utente o password" };
+  }
   // Un aggiornamento alla volta (cron, app aperta su due dispositivi...); dopo 2 minuti si considera bloccato
   const prenotato = await db.prepare(
     `INSERT INTO impostazioni (chiave, valore) VALUES ('in_corso', ?1) ON CONFLICT(chiave) DO UPDATE SET valore = excluded.valore
@@ -34,7 +60,7 @@ export async function aggiorna(env: Env, now: Date, fetchFn: typeof fetch = fetc
   ).bind(adesso, new Date(now.getTime() - IN_CORSO_MAX_MS).toISOString()).first();
   if (!prenotato) return { ok: false, inCorso: true, errore: "Aggiornamento già in corso" };
   try {
-    const dati = await scaricaRegistro(env.CLASSEVIVA_UTENTE, env.CLASSEVIVA_PASSWORD, oggi, fetchFn);
+    const dati = await scaricaRegistro(credenziali.utente, credenziali.password, oggi, fetchFn);
     const orarioMd = (await db.prepare("SELECT valore FROM impostazioni WHERE chiave = 'orario_md'").first<{ valore: string }>())?.valore ?? "";
     const orario = parseOrario(orarioMd);
 
@@ -105,15 +131,19 @@ export async function aggiorna(env: Env, now: Date, fetchFn: typeof fetch = fetc
       s.push(db.prepare("INSERT INTO periodi (pos, nome, inizio, fine) VALUES (?, ?, ?, ?)").bind(p.periodPos, p.periodLabel, p.dateStart, p.dateEnd));
     }
 
-    s.push(salvaImpostazione(db, "ultimo_ok", adesso), salvaImpostazione(db, "ultimo_tentativo", adesso), salvaImpostazione(db, "ultimo_errore", null), salvaImpostazione(db, "in_corso", null));
+    s.push(salvaImpostazione(db, "ultimo_ok", adesso), salvaImpostazione(db, "ultimo_tentativo", adesso), salvaImpostazione(db, "ultimo_errore", null), salvaImpostazione(db, "credenziali_rifiutate", null), salvaImpostazione(db, "in_corso", null));
     await db.batch(s);
     // Il registro è salvato anche se il piano non riesce a rifarsi
     await ripianifica(db, now).catch((e) => console.error("ripianifica", e));
     return { ok: true };
   } catch (e) {
-    const errore = e instanceof ErroreClasseviva ? e.message : "Errore imprevisto durante l'aggiornamento";
-    if (!(e instanceof ErroreClasseviva)) console.error("aggiorna", e);
-    await db.batch([salvaImpostazione(db, "ultimo_tentativo", adesso), salvaImpostazione(db, "ultimo_errore", errore), salvaImpostazione(db, "in_corso", null)]);
+    const rifiutate = credenzialiRifiutate(e);
+    const errore = messaggioErrore(e);
+    console.error("aggiorna", e instanceof Error ? e.message : e);
+    await db.batch([
+      salvaImpostazione(db, "ultimo_tentativo", adesso), salvaImpostazione(db, "ultimo_errore", errore), salvaImpostazione(db, "in_corso", null),
+      salvaImpostazione(db, "credenziali_rifiutate", rifiutate ? adesso : null),
+    ]);
     return { ok: false, errore };
   }
 }

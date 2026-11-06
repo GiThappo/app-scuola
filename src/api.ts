@@ -1,8 +1,10 @@
 import { Hono } from "hono";
 import { richiediLogin, rotteAuth } from "./auth";
-import { aggiorna, type Env } from "./registro/aggiorna";
+import { accedi, credenzialiRifiutate } from "./classeviva/client";
+import { aggiorna, messaggioErrore, type Env } from "./registro/aggiorna";
+import { leggiCredenziali, salvaCredenziali } from "./registro/credenziali";
 import { aggiungiGiorni, giornoIso, inizioAnnoScolastico, oggiRoma } from "./registro/date";
-import { haMateria, parseOrario, stessaMateria } from "./registro/orario";
+import { haMateria, leggiOrarioInviato, parseOrario, propostaOrario, scriviOrario, stessaMateria } from "./registro/orario";
 import { materialeDi, rotteMateriale } from "./materiale/api";
 import { rotteStudio } from "./studio/api";
 import { ripianifica } from "./studio/ripianifica";
@@ -16,6 +18,8 @@ type RigaMedia = { materia: string; media: number | null; n_voti: number };
 
 const GIORNO_MS = 24 * 3600 * 1000;
 const PAUSA_AGGIORNA_MS = 60 * 1000;
+const GIORNI_PER_PROPOSTA = 42;
+const PAUSA_COLLEGA_MS = 30 * 1000;
 const DATA = /^\d{4}-\d{2}-\d{2}$/;
 
 function mediaRighe(voti: RigaVoto[]): number | null {
@@ -42,7 +46,37 @@ export function creaApp({ now = () => new Date(), fetchFn }: Opzioni = {}) {
 
   app.get("/api/stato", async (c) => {
     const imp = await impostazioni(c.env.DB);
-    return c.json({ oggi: oggiRoma(now()), ultimo_ok: imp.ultimo_ok ?? null, ultimo_tentativo: imp.ultimo_tentativo ?? null, ultimo_errore: imp.ultimo_errore ?? null });
+    const classeviva = !(await leggiCredenziali(c.env)) ? "mancante" : imp.credenziali_rifiutate ? "rifiutata" : "ok";
+    return c.json({
+      oggi: oggiRoma(now()), ultimo_ok: imp.ultimo_ok ?? null, ultimo_tentativo: imp.ultimo_tentativo ?? null, ultimo_errore: imp.ultimo_errore ?? null,
+      classeviva, ha_orario: Object.keys(parseOrario(imp.orario_md ?? "").giorni).length > 0,
+    });
+  });
+
+  // Collega o corregge l'account: prova l'accesso e salva solo se Classeviva lo accetta
+  app.post("/api/classeviva", async (c) => {
+    const db = c.env.DB;
+    const { utente, password } = (await c.req.json().catch(() => null) ?? {}) as { utente?: unknown; password?: unknown };
+    const nome = typeof utente === "string" ? utente.trim() : "";
+    if (!nome || nome.length > 100 || typeof password !== "string" || !password || password.length > 200) {
+      return c.json({ errore: "Inserisci nome utente e password di Classeviva" }, 400);
+    }
+    const { classeviva_tentativo: tentativo } = await impostazioni(db);
+    if (tentativo && now().getTime() - new Date(tentativo).getTime() < PAUSA_COLLEGA_MS) {
+      return c.json({ errore: "Aspetta mezzo minuto e riprova: troppi tentativi possono bloccare l'account" }, 429);
+    }
+    const salva = (k: string, v: string | null) =>
+      db.prepare("INSERT INTO impostazioni (chiave, valore) VALUES (?, ?) ON CONFLICT(chiave) DO UPDATE SET valore = excluded.valore").bind(k, v);
+    await salva("classeviva_tentativo", now().toISOString()).run();
+    try {
+      await accedi(nome, password, fetchFn ?? fetch);
+    } catch (e) {
+      return c.json({ errore: messaggioErrore(e) }, credenzialiRifiutate(e) ? 400 : 502);
+    }
+    await salvaCredenziali(c.env, nome, password);
+    await db.batch([salva("credenziali_rifiutate", null), salva("ultimo_errore", null)]);
+    const r = await aggiorna(c.env, now(), fetchFn, { forza: true });
+    return c.json({ ok: true, aggiornato: r.ok });
   });
 
   app.post("/api/aggiorna", async (c) => {
@@ -50,7 +84,7 @@ export function creaApp({ now = () => new Date(), fetchFn }: Opzioni = {}) {
     if (ultimo_tentativo && now().getTime() - new Date(ultimo_tentativo).getTime() < PAUSA_AGGIORNA_MS) {
       return c.json({ errore: "Aggiornamento appena fatto" }, 429);
     }
-    const r = await aggiorna(c.env, now(), fetchFn);
+    const r = await aggiorna(c.env, now(), fetchFn, { forza: true });
     return r.inCorso ? c.json({ errore: r.errore }, 429) : c.json(r);
   });
 
@@ -147,7 +181,24 @@ export function creaApp({ now = () => new Date(), fetchFn }: Opzioni = {}) {
     const giorni = Object.keys(orario.giorni).map(Number).sort((a, b) => a - b).map((g) => ({
       giorno: g, ore: orario.giorni[g], uscita: orario.uscita[g] ?? null, giornata: orario.giornata[g] ?? null,
     }));
-    return c.json({ oggi: oggiRoma(now()), giorni, note: orario.note });
+    const db = c.env.DB;
+    const oggi = oggiRoma(now());
+    const nomi = (await db.prepare("SELECT DISTINCT materia FROM voti UNION SELECT DISTINCT materia FROM lezioni").all<{ materia: string }>()).results.map((r) => r.materia);
+    const proposta = giorni.length ? [] : propostaOrario((await db.prepare("SELECT data, ora, materia FROM lezioni WHERE data >= ?")
+      .bind(aggiungiGiorni(oggi, -GIORNI_PER_PROPOSTA)).all<{ data: string; ora: number | null; materia: string }>()).results);
+    const materie = [...new Set([...nomi, ...giorni.flatMap((g) => g.ore)])].sort((a, b) => a.localeCompare(b));
+    return c.json({ oggi, giorni, note: orario.note, senza_registro: orario.senzaRegistro, materie, proposta });
+  });
+
+  app.put("/api/orario", async (c) => {
+    const db = c.env.DB;
+    const inviato = leggiOrarioInviato(await c.req.json().catch(() => null));
+    if (typeof inviato === "string") return c.json({ errore: inviato }, 400);
+    const { orario_md } = await impostazioni(db);
+    await db.prepare("INSERT INTO impostazioni (chiave, valore) VALUES ('orario_md', ?) ON CONFLICT(chiave) DO UPDATE SET valore = excluded.valore")
+      .bind(scriviOrario(orario_md ?? "", inviato.giorni, inviato.senzaRegistro)).run();
+    await ripianifica(db, now());
+    return c.json({ ok: true });
   });
 
   rotteStudio(app, now);

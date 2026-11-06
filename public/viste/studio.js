@@ -1,5 +1,5 @@
 import { api, esc } from "../app.js";
-import { daQuanto, etichettaGiorno, etichettaBlocco, tonoMateria } from "../formato.js";
+import { daQuanto, etichettaGiorno, etichettaBlocco, messaggiVuoto, tonoMateria } from "../formato.js";
 
 const DURATE = [15, 20, 30, 45, 60, 90, 120];
 const adessoRoma = () => new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Rome", dateStyle: "short", timeStyle: "short" }).format(new Date()).replace(" ", "T");
@@ -62,7 +62,7 @@ const TOAST_MS = 8000;
 
 /** appenaEliminato: id del blocco appena tolto, per il tasto Annulla. */
 export async function vistaStudio(el, { appenaEliminato = null } = {}) {
-  const s = await api("/api/studio");
+  const [s, stato] = await Promise.all([api("/api/studio"), api("/api/stato")]);
   const adesso = adessoRoma();
   const cal = s.calendario.ultimo_sync
     ? `Google Calendar: sincronizzato ${daQuanto(s.calendario.ultimo_sync)}`
@@ -71,7 +71,7 @@ export async function vistaStudio(el, { appenaEliminato = null } = {}) {
     ? `<div class="avviso"><b>Non ci sta tutto.</b> Sposta qualcosa o anticipa:<ul>${s.non_ci_sta.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div>` : "";
   const giorni = s.giorni.length
     ? s.giorni.map((g) => `<h2>${esc(etichettaGiorno(g.data, s.oggi))}</h2>${g.blocchi.map((b) => blocco(b, adesso, s.oggi)).join("")}`).join("")
-    : `<p class="vuoto">Niente da studiare nei prossimi 14 giorni. Le verifiche e i compiti del registro compaiono qui da soli.</p>`;
+    : `<p class="vuoto">${esc(messaggiVuoto(stato).studio)}</p>`;
 
   const eliminati = s.eliminati.length
     ? `<details class="eliminati"><summary>Eliminati (${s.eliminati.length})</summary>${s.eliminati.map((b) => `

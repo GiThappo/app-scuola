@@ -64,6 +64,41 @@ test("oreLezioni", async () => {
   expect(oreLezioni(null, 5)).toEqual(["", "", "", "", ""]);
 });
 
+test("messaggiVuoto: dice \"niente\" solo se il registro è stato controllato", async () => {
+  const { messaggiVuoto } = await import("../public/formato.js");
+  const adesso = new Date("2026-11-06T12:00:00Z");
+
+  const mai = messaggiVuoto({ ultimo_ok: null, ultimo_errore: "Identificativo o password errati" }, adesso);
+  for (const testo of [mai.domani, mai.avanti, mai.studio]) {
+    expect(testo).toContain("Non so ancora");
+    expect(testo).not.toContain("Niente");
+  }
+
+  const fallito = messaggiVuoto({ ultimo_ok: "2026-11-06T10:00:00Z", ultimo_errore: "Classeviva non risponde" }, adesso);
+  for (const testo of [fallito.domani, fallito.avanti, fallito.studio]) {
+    expect(testo).toContain("all'ultimo controllo riuscito (2 ore fa)");
+    expect(testo).toContain("potrebbe essere cambiato qualcosa");
+  }
+
+  expect(messaggiVuoto({ ultimo_ok: "2026-11-06T11:59:30Z", ultimo_errore: null }, adesso)).toEqual({
+    domani: "Niente sul registro per domani.",
+    avanti: "Niente più avanti nei prossimi 30 giorni.",
+    studio: "Niente da studiare nei prossimi 14 giorni. Le verifiche e i compiti del registro compaiono qui da soli.",
+  });
+});
+
+test("percorsoCaricamento: nomi diversi anche con foto chiamate uguali, e percorso accettato dal server", async () => {
+  const { percorsoCaricamento } = await import("../public/formato.js");
+  const { leggiPercorso } = await import("../src/materiale/api");
+  const adesso = new Date("2026-11-06T13:30:05Z");
+  const p = percorsoCaricamento("Sistemi e reti", "image.jpg", adesso);
+  expect(p).toBe("Sistemi e reti/appunti/dal telefono 2026-11-06 14.30.05 image.jpg");
+  expect(percorsoCaricamento("Sistemi e reti", "image.jpg", new Date("2026-11-06T13:30:06Z"))).not.toBe(p);
+  expect(leggiPercorso(p)).toMatchObject({ materia: "Sistemi e reti", tipo: "appunti", mime: "image/jpeg" });
+  expect(leggiPercorso(percorsoCaricamento("A/B", "c/d.pdf", adesso))).toMatchObject({ materia: "A B", tipo: "appunti" });
+  expect(leggiPercorso(percorsoCaricamento("Storia", "foto.heic", adesso))).toBeNull();
+});
+
 test("etichettaBlocco", async () => {
   const { etichettaBlocco } = await import("../public/formato.js");
   expect(etichettaBlocco({ tipo: "COMPITO", scadenza: "2026-10-29" }, "2026-10-28")).toEqual({ testo: "PER DOMANI", classe: "DOMANI" });

@@ -23,6 +23,9 @@ export class ErroreClasseviva extends Error {
   }
 }
 
+/** Vero solo se Classeviva ha risposto e ha detto di no; un sito irraggiungibile non significa password sbagliata. */
+export const credenzialiRifiutate = (e: unknown) => e instanceof ErroreClasseviva && e.fase === "login" && e.stato >= 200 && e.stato < 300;
+
 export type DatiRegistro = {
   voti: VotoCV[];
   materie: any[];
@@ -44,7 +47,7 @@ function annoScolastico(oggi: string): string {
   return String((mese >= 9 ? anno : anno - 1) % 100).padStart(2, "0");
 }
 
-async function accedi(utente: string, password: string, fetchFn: typeof fetch): Promise<string> {
+export async function accedi(utente: string, password: string, fetchFn: typeof fetch): Promise<string> {
   const pagina = await fetchFn(PAGINA_LOGIN, { headers: INTESTAZIONI });
   if (!pagina.ok) throw new ErroreClasseviva(`Classeviva ha rifiutato la connessione (HTTP ${pagina.status})`, "login", pagina.status);
   let cookie = sessione(pagina) ?? "";

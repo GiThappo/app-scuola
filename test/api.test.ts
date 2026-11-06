@@ -140,7 +140,7 @@ test("una materia", async () => {
 
 test("stato", async () => {
   const { json } = await get("/api/stato");
-  expect(json).toEqual({ oggi: "2026-10-23", ultimo_ok: null, ultimo_tentativo: null, ultimo_errore: null });
+  expect(json).toEqual({ oggi: "2026-10-23", ultimo_ok: null, ultimo_tentativo: null, ultimo_errore: null, classeviva: "ok", ha_orario: true });
 });
 
 test("aggiorna due volte di seguito", async () => {
@@ -210,5 +210,62 @@ test("orario", async () => {
 
 test("orario non caricato", async () => {
   await E.DB.exec("DELETE FROM impostazioni");
-  expect((await get("/api/orario")).json).toEqual({ oggi: "2026-10-23", giorni: [], note: "" });
+  await E.DB.exec("DELETE FROM lezioni");
+  expect((await get("/api/orario")).json).toEqual({ oggi: "2026-10-23", giorni: [], note: "", senza_registro: [], materie: ["Filosofia", "Fisica", "Italiano", "Matematica"], proposta: [] });
+});
+
+test("orario non caricato: propone quello ricostruito dalle lezioni recenti", async () => {
+  await E.DB.exec("DELETE FROM impostazioni");
+  await E.DB.exec("DELETE FROM lezioni");
+  await E.DB.prepare("INSERT INTO lezioni (id, data, ora, materia) VALUES (1, '2026-10-19', 1, 'Storia'), (2, '2026-10-19', 2, 'Arte'), (3, '2026-06-01', 1, 'Vecchia')").run();
+  const { json } = await get("/api/orario");
+  expect(json.proposta).toEqual([{ giorno: 1, ore: ["Storia", "Arte"], uscita: null, giornata: null }]);
+  expect(json.materie).toContain("Arte");
+});
+
+test("salvare l'orario: lo aggiorna, tiene le regole e rifà il piano", async () => {
+  const giorni = [
+    { giorno: 6, ore: [" Fisica ", "", "Arte"], uscita: "9:30", giornata: "leggera" },
+    { giorno: 1, ore: ["Storia"], uscita: "", giornata: "" },
+    { giorno: 2, ore: [], uscita: null, giornata: null },
+  ];
+  expect(await manda("PUT", "/api/orario", { giorni, senza_registro: ["Fisica"] })).toEqual({ stato: 200, json: { ok: true } });
+  const { json } = await get("/api/orario");
+  expect(json.giorni).toEqual([
+    { giorno: 1, ore: ["Storia"], uscita: null, giornata: null },
+    { giorno: 6, ore: ["Fisica", "Arte"], uscita: "09:30", giornata: "leggera" },
+  ]);
+  expect(json.senza_registro).toEqual(["Fisica"]);
+  expect(json.note).toContain("## Come usarlo");
+  expect(json.proposta).toEqual([]);
+  expect((await get("/api/agenda")).json.promemoria).toEqual(["Fisica"]); // domani è sabato
+});
+
+test("salvare l'orario: i dati sbagliati non toccano quello esistente", async () => {
+  const prima = (await get("/api/orario")).json;
+  const buono = { giorno: 1, ore: ["Storia"], uscita: null, giornata: null };
+  for (const corpo of [
+    undefined, {}, { giorni: "no" }, { giorni: [] },
+    { giorni: [{ giorno: 1, ore: [], uscita: null, giornata: null }] },
+    { giorni: [{ ...buono, giorno: 8 }] },
+    { giorni: [buono, buono] },
+    { giorni: [{ ...buono, ore: ["a|b"] }] },
+    { giorni: [{ ...buono, ore: ["a\nb"] }] },
+    { giorni: [{ ...buono, ore: ["x".repeat(61)] }] },
+    { giorni: [{ ...buono, ore: Array(13).fill("Storia") }] },
+    { giorni: [{ ...buono, uscita: "25:00" }] },
+    { giorni: [{ ...buono, giornata: "a|b" }] },
+    { giorni: [buono], senza_registro: ["a:b"] },
+    { giorni: [buono], senza_registro: "Storia" },
+  ]) {
+    const r = await manda("PUT", "/api/orario", corpo);
+    expect(r.stato).toBe(400);
+    expect(typeof r.json.errore).toBe("string");
+  }
+  expect((await get("/api/orario")).json).toEqual(prima);
+});
+
+test("salvare l'orario richiede il login", async () => {
+  const r = await app().fetch(new Request("https://app.test/api/orario", { method: "PUT", body: "{}" }), E);
+  expect(r.status).toBe(401);
 });

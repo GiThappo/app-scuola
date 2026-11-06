@@ -219,3 +219,38 @@ details.blocco.fatto > summary .nome { text-decoration: line-through; color: var
 .voto.blu { color: #fff; background: #3b82f6; }
 .voce.voto-blu { align-items: center; }
 .voce:has(.voto) { align-items: center; }
+
+/* Modifica dell'orario */
+.editor-orario { display: grid; gap: 12px; margin-top: 12px; }
+.giorno-modifica, .senza-registro { display: grid; gap: 10px; margin: 0; }
+.senza-registro { border: 1px solid var(--bordo); min-width: 0; }
+.senza-registro legend { padding: 0 6px; font-weight: 600; }
+.ore-modifica { list-style: none; display: grid; gap: 8px; margin: 0; padding: 0; }
+.ore-modifica:empty { display: none; }
+.ore-modifica li { display: flex; align-items: center; gap: 8px; }
+.ore-modifica .ora { min-width: 28px; color: var(--tenue); font-size: 14px; }
+.ore-modifica .materia { flex: 1; min-width: 0; }
+.ore-modifica .togli { flex: none; min-width: 44px; min-height: 44px; }
+.giorno-modifica .aggiungi { justify-self: start; }
+.campi-giorno { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.scelte { display: grid; gap: 4px; }
+.modulo .scelta { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 16px; color: var(--testo); }
+.modulo .scelta input { width: 22px; min-height: 22px; height: 22px; flex: none; }
+
+/* Primi passi e collegamento a Classeviva */
+.primi-passi { display: block; border-color: var(--accento); }
+.primi-passi h2 { margin: 0 0 6px; }
+.primi-passi ol { margin: 0; padding-left: 20px; display: grid; gap: 8px; }
+.primi-passi a, .avviso a { color: inherit; font-weight: 600; }
+a.bottone { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; color: inherit; }
+.modulo .errore:empty { display: none; }
+.campi-giorno[hidden] { display: none; }
+
+/* Appunti caricati dal telefono */
+.carica-appunti { margin-top: 12px; }
+.carica-appunti label { display: inline-flex; align-items: center; cursor: pointer; }
+.carica-appunti input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.carica-appunti .errore:empty { display: none; }
+.file-telefono { display: flex; align-items: center; gap: 8px; }
+.file-telefono .voce { flex: 1; min-width: 0; }
+.file-telefono .bottone { flex: none; }

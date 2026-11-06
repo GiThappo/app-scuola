@@ -30,6 +30,17 @@ export async function verificaPassword(pw: string, hash: string): Promise<boolea
   return diff === 0;
 }
 
+/** Vale l'impronta se c'è; altrimenti la password del modulo di installazione. Senza nessuna delle due non entra nessuno. */
+async function passwordGiusta(pw: string, env: Env): Promise<boolean> {
+  if (env.APP_PASSWORD_HASH) return verificaPassword(pw, env.APP_PASSWORD_HASH);
+  if (!env.APP_PASSWORD) return false;
+  const impronta = async (s: string) => new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)));
+  const [a, b] = await Promise.all([impronta(pw), impronta(env.APP_PASSWORD)]);
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i];
+  return diff === 0;
+}
+
 const nuovoToken = () =>
   b64(crypto.getRandomValues(new Uint8Array(32))).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
 
@@ -51,7 +62,7 @@ rotteAuth.post("/api/login", async (c) => {
   if ((tentativi?.n ?? 0) >= MAX_TENTATIVI) return c.json({ errore: "Troppi tentativi, riprova tra un minuto" }, 429);
 
   const { password } = await c.req.json<{ password?: string }>().catch(() => ({ password: undefined }));
-  if (!password || !(await verificaPassword(password, c.env.APP_PASSWORD_HASH))) {
+  if (!password || !(await passwordGiusta(password, c.env))) {
     await db.batch([
       db.prepare("INSERT INTO tentativi_login (minuto, n) VALUES (?, 1) ON CONFLICT(minuto) DO UPDATE SET n = n + 1").bind(minuto),
       db.prepare("DELETE FROM tentativi_login WHERE minuto < ?").bind(minuto),
