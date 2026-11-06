@@ -110,6 +110,8 @@ Fatto: apri l'indirizzo dal telefono, metti la password e aggiungi la pagina all
 
 ### 6. Google Calendar (facoltativo)
 
+Non è necessario: gli impegni si possono segnare direttamente nell'app, in **Studio → ＋ Impegno**, anche ogni settimana. Il collegamento qui sotto richiede qualche passaggio tecnico e serve a chi vuole vedere il piano nel proprio calendario. Le due cose funzionano anche insieme; gli impegni segnati nell'app non finiscono nel calendario.
+
 Uno script nel tuo account Google, ogni 5 minuti, manda all'app gli **orari** dei tuoi impegni (non i titoli) e scrive nel calendario i blocchi di studio (`[Tutor] ...`). Tocca solo gli eventi che crea lui.
 
 1. Crea un token e dallo all'app:

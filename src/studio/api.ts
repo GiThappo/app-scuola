@@ -18,6 +18,21 @@ export function daTitolo(titolo: string, note: string[]): { materia: string; cos
 
 const testo = (s: unknown, max: number) => (typeof s === "string" && s.trim() && s.length <= max ? s.trim() : null);
 
+const PREFISSO_IMPEGNO = "app-";
+const SETTIMANE_IMPEGNO = 12;
+
+/** Impegni aggiunti dall'app, non ancora finiti. Quelli settimanali si vedono una volta sola, alla prossima data. */
+async function impegniDellApp(db: D1Database, adesso: string) {
+  const righe = (await db.prepare("SELECT id, titolo, inizio, fine FROM impegni WHERE id LIKE 'app-%' AND fine > ? ORDER BY inizio")
+    .bind(adesso).all<{ id: string; titolo: string; inizio: string; fine: string }>()).results;
+  const gruppi = new Map<string, typeof righe[number] & { ogni_settimana: boolean }>();
+  for (const r of righe) {
+    const [, gruppo, settimana] = r.id.match(/^(app-[0-9a-f-]{36})(?:~(\d+))?$/) ?? [];
+    if (gruppo && !gruppi.has(gruppo)) gruppi.set(gruppo, { ...r, id: gruppo, ogni_settimana: settimana !== undefined });
+  }
+  return [...gruppi.values()];
+}
+
 /** Token dello script di Google Calendar, confrontato in tempo costante. */
 const richiediToken: MiddlewareHandler<{ Bindings: Env }> = async (c, next) => {
   const atteso = c.env.CALENDARIO_TOKEN;
@@ -63,6 +78,7 @@ export function rotteStudio(app: Hono<{ Bindings: Env }>, now: () => Date) {
       non_ci_sta: JSON.parse((await valore(db, "piano_non_ci_sta")) ?? "[]"),
       calendario: { ultimo_sync: await valore(db, "cal_ultimo_sync"), configurato: !!c.env.CALENDARIO_TOKEN },
       materie: materie.map((m) => m.materia),
+      impegni: await impegniDellApp(db, localeRoma(now())),
     });
   });
 
@@ -117,6 +133,36 @@ export function rotteStudio(app: Hono<{ Bindings: Env }>, now: () => Date) {
     return c.json({ ok: true });
   });
 
+  app.post("/api/impegni", async (c) => {
+    const db = c.env.DB;
+    const b = await c.req.json<Record<string, unknown>>().catch(() => ({}) as Record<string, unknown>);
+    const titolo = testo(b.titolo, 100);
+    const oggi = localeRoma(now()).slice(0, 10);
+    if (!titolo) return c.json({ errore: "Scrivi che impegno è" }, 400);
+    if (!DATA.test(String(b.data)) || !ORA.test(String(b.ora)) || !ORA.test(String(b.fine))) return c.json({ errore: "Servono giorno, ora di inizio e ora di fine" }, 400);
+    if (String(b.data) < oggi) return c.json({ errore: "Il giorno è già passato" }, 400);
+    if (String(b.fine) <= String(b.ora)) return c.json({ errore: "L'ora di fine deve venire dopo quella di inizio" }, 400);
+    const id = `${PREFISSO_IMPEGNO}${crypto.randomUUID()}`;
+    const settimane = b.ogni_settimana === true ? SETTIMANE_IMPEGNO : 1;
+    await db.batch(Array.from({ length: settimane }, (_, i) => {
+      const giorno = aggiungiGiorni(String(b.data), i * 7);
+      return db.prepare("INSERT INTO impegni (id, titolo, inizio, fine) VALUES (?, ?, ?, ?)")
+        .bind(b.ogni_settimana === true ? `${id}~${i}` : id, titolo, `${giorno}T${b.ora}`, `${giorno}T${b.fine}`);
+    }));
+    await ripianifica(db, now());
+    return c.json({ id }, 201);
+  });
+
+  app.delete("/api/impegni/:id", async (c) => {
+    const db = c.env.DB;
+    const id = c.req.param("id");
+    if (!/^app-[0-9a-f-]{36}$/.test(id)) return c.json({ errore: "Impegno non trovato" }, 404);
+    const r = await db.prepare("DELETE FROM impegni WHERE id = ? OR id LIKE ?").bind(id, `${id}~%`).run();
+    if (!r.meta.changes) return c.json({ errore: "Impegno non trovato" }, 404);
+    await ripianifica(db, now());
+    return c.json({ ok: true });
+  });
+
   app.post("/cal/sync", richiediToken, async (c) => {
     const db = c.env.DB;
     const b = await c.req.json<{ impegni?: unknown; spostati?: unknown; eliminati?: unknown; importa?: unknown }>().catch(() => ({}) as Record<string, unknown>);
@@ -124,7 +170,7 @@ export function rotteStudio(app: Hono<{ Bindings: Env }>, now: () => Date) {
     const quando = (iso: unknown) => (typeof iso === "string" && !Number.isNaN(Date.parse(iso)) ? localeRoma(new Date(iso)) : null);
     const idBlocco = (x: unknown) => (typeof x === "string" && /^b\d+$/.test(x) ? Number(x.slice(1)) : null);
 
-    const s: D1PreparedStatement[] = [db.prepare("DELETE FROM impegni")];
+    const s: D1PreparedStatement[] = [db.prepare("DELETE FROM impegni WHERE id NOT LIKE 'app-%'")];
     for (const e of lista(b.impegni)) {
       const [inizio, fine] = [quando(e?.inizio), quando(e?.fine)];
       if (inizio && fine && fine > inizio) {

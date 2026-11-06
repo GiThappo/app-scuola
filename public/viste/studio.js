@@ -66,7 +66,12 @@ export async function vistaStudio(el, { appenaEliminato = null } = {}) {
   const adesso = adessoRoma();
   const cal = s.calendario.ultimo_sync
     ? `Google Calendar: sincronizzato ${daQuanto(s.calendario.ultimo_sync)}`
-    : "Google Calendar: non ancora collegato";
+    : s.calendario.configurato ? "Google Calendar: non ancora collegato" : "";
+  const impegni = s.impegni.map((i) => `
+    <div class="voce impegno">
+      <div class="corpo"><b>${esc(i.titolo)}</b><div class="nota">${i.ogni_settimana ? "Ogni settimana · prossimo: " : ""}${esc(etichettaGiorno(i.inizio.slice(0, 10), s.oggi))} · ${esc(i.inizio.slice(11))}–${esc(i.fine.slice(11))}</div></div>
+      <button class="bottone piccolo" data-togli-impegno="${esc(i.id)}">Togli</button>
+    </div>`).join("");
   const nonCiSta = s.non_ci_sta.length
     ? `<div class="avviso"><b>Non ci sta tutto.</b> Sposta qualcosa o anticipa:<ul>${s.non_ci_sta.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div>` : "";
   const giorni = s.giorni.length
@@ -87,8 +92,20 @@ export async function vistaStudio(el, { appenaEliminato = null } = {}) {
   el.innerHTML = `<div id="studio">
     <div class="testa">
       <div><h1>Studio</h1><div class="sotto">${esc(cal)}</div></div>
-      <button class="bottone" id="nuovo">＋ Aggiungi</button>
+      <div class="azioni"><button class="bottone" id="nuovo-impegno">＋ Impegno</button><button class="bottone" id="nuovo">＋ Studio</button></div>
     </div>
+    <form class="voce modulo" data-modulo="impegno" hidden>
+      <label>Che impegno è? <input name="titolo" required maxlength="100" placeholder="es. calcetto, dentista"></label>
+      <label>Giorno <input type="date" name="data" value="${esc(s.oggi)}" min="${esc(s.oggi)}" required></label>
+      <div class="campi-giorno">
+        <label>Dalle <input type="time" name="ora" value="16:00" required></label>
+        <label>Alle <input type="time" name="fine" value="17:00" required></label>
+      </div>
+      <label class="scelta"><input type="checkbox" name="ogni_settimana"> Ogni settimana, per le prossime 12 settimane</label>
+      <p class="nota">L'app organizza lo studio intorno a questo orario.</p>
+      <div class="azioni"><button class="bottone primario piccolo">Aggiungi impegno</button><button class="bottone piccolo" type="button" data-azione="annulla">Annulla</button></div>
+      <p class="errore"></p>
+    </form>
     <form class="voce modulo" data-modulo="nuovo" hidden>
       <label>Materia <input name="materia" list="materie" required maxlength="60"></label>
       <datalist id="materie">${s.materie.map((m) => `<option value="${esc(m)}">`).join("")}</datalist>
@@ -98,6 +115,7 @@ export async function vistaStudio(el, { appenaEliminato = null } = {}) {
       <p class="errore"></p>
     </form>
     ${nonCiSta}${giorni}${eliminati}
+    ${impegni ? `<h2>I tuoi impegni</h2>${impegni}` : ""}
     <p class="nota">I blocchi che sposti o aggiungi diventano <b>tuoi</b>: il piano automatico non li tocca e organizza il resto intorno.</p>${toast}</div>`;
   const radice = el.querySelector("#studio");
   for (const d of radice.querySelectorAll("details.blocco")) {
@@ -111,7 +129,24 @@ export async function vistaStudio(el, { appenaEliminato = null } = {}) {
     return { ...Object.fromEntries(f), durata: Number(f.get("durata")) };
   };
   const nuovo = radice.querySelector('[data-modulo="nuovo"]');
-  radice.querySelector("#nuovo").addEventListener("click", () => { nuovo.hidden = false; nuovo.querySelector("input").focus(); });
+  const nuovoImpegno = radice.querySelector('[data-modulo="impegno"]');
+  radice.querySelector("#nuovo").addEventListener("click", () => { nuovoImpegno.hidden = true; nuovo.hidden = false; nuovo.querySelector("input").focus(); });
+  radice.querySelector("#nuovo-impegno").addEventListener("click", () => { nuovo.hidden = true; nuovoImpegno.hidden = false; nuovoImpegno.querySelector("input").focus(); });
+  for (const b of radice.querySelectorAll("[data-togli-impegno]")) {
+    // In due tocchi, senza finestre di conferma del browser
+    b.addEventListener("click", async () => {
+      if (b.textContent !== "Sicuro?") { b.textContent = "Sicuro?"; return; }
+      b.disabled = true;
+      try {
+        await api(`/api/impegni/${b.dataset.togliImpegno}`, { method: "DELETE" });
+        await ricarica();
+      } catch (err) {
+        b.disabled = false;
+        b.textContent = "Togli";
+        b.closest(".impegno").querySelector(".corpo").insertAdjacentHTML("beforeend", `<p class="errore">${esc(err.message)}</p>`);
+      }
+    });
+  }
 
   radice.addEventListener("click", async (e) => {
     const bottone = e.target.closest("[data-azione]");
@@ -136,7 +171,10 @@ export async function vistaStudio(el, { appenaEliminato = null } = {}) {
     const form = e.target;
     form.querySelector("button").disabled = true;
     try {
-      if (form.dataset.modulo === "nuovo") await api("/api/studio", { method: "POST", body: JSON.stringify(valori(form)) });
+      if (form.dataset.modulo === "impegno") {
+        const f = new FormData(form);
+        await api("/api/impegni", { method: "POST", body: JSON.stringify({ titolo: f.get("titolo"), data: f.get("data"), ora: f.get("ora"), fine: f.get("fine"), ogni_settimana: f.get("ogni_settimana") === "on" }) });
+      } else if (form.dataset.modulo === "nuovo") await api("/api/studio", { method: "POST", body: JSON.stringify(valori(form)) });
       else await api(`/api/studio/${form.closest("[data-id]").dataset.id}`, { method: "PATCH", body: JSON.stringify(valori(form)) });
       await ricarica();
     } catch (err) {

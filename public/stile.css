@@ -254,3 +254,8 @@ a.bottone { display: inline-flex; align-items: center; justify-content: center; 
 .file-telefono { display: flex; align-items: center; gap: 8px; }
 .file-telefono .voce { flex: 1; min-width: 0; }
 .file-telefono .bottone { flex: none; }
+
+/* Impegni dall'app */
+.impegno { align-items: center; }
+.impegno .bottone { flex: none; }
+.testa .azioni .bottone { white-space: nowrap; }

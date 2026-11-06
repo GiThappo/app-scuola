@@ -182,3 +182,58 @@ test("eliminato per sbaglio: si ripristina dov'era, anche quelli aggiunti a mano
   expect((await sync()).json.blocchi.some((b: any) => b.id === `b${auto.id}`)).toBe(true); // torna anche in Calendar
   expect((await chiama("POST", `/api/studio/${auto.id}/ripristina`)).stato).toBe(404);
 });
+
+const impegno = (corpo: unknown, now = ORA) => chiama("POST", "/api/impegni", corpo, COOKIE, E, now);
+const CALCETTO = { titolo: "Calcetto", data: "2026-10-26", ora: "15:00", fine: "17:00" };
+
+test("impegno dall'app: il piano lo evita e la sincronizzazione del calendario non lo cancella", async () => {
+  const r = await impegno(CALCETTO);
+  expect(r.stato).toBe(201);
+  expect((await studio()).impegni).toEqual([{ id: r.json.id, titolo: "Calcetto", inizio: "2026-10-26T15:00", fine: "2026-10-26T17:00", ogni_settimana: false }]);
+  const s = await sync({ impegni: [{ id: "x", titolo: "Dal calendario", inizio: "2026-10-27T14:00:00.000Z", fine: "2026-10-27T15:00:00.000Z" }] });
+  const compito = s.json.blocchi.find((b: any) => b.titolo === "[Tutor] Matematica: Compito per mar 27");
+  expect(compito.inizio).toBe("2026-10-26T16:00:00.000Z"); // le 17:00 a Roma, alla fine dell'impegno
+  expect((await studio()).impegni.map((i: any) => i.titolo)).toEqual(["Calcetto"]);
+  expect((await E.DB.prepare("SELECT COUNT(*) AS n FROM impegni").first<{ n: number }>())!.n).toBe(2);
+});
+
+test("impegno ogni settimana: si vede una volta sola e si toglie tutto insieme", async () => {
+  const { json } = await impegno({ ...CALCETTO, ogni_settimana: true });
+  const conta = async () => (await E.DB.prepare("SELECT COUNT(*) AS n FROM impegni").first<{ n: number }>())!.n;
+  expect(await conta()).toBe(12);
+  const lista = (await studio()).impegni;
+  expect(lista).toEqual([{ id: json.id, titolo: "Calcetto", inizio: "2026-10-26T15:00", fine: "2026-10-26T17:00", ogni_settimana: true }]);
+  expect((await E.DB.prepare("SELECT MAX(inizio) AS m FROM impegni").first<{ m: string }>())!.m).toBe("2027-01-11T15:00");
+  expect((await chiama("DELETE", `/api/impegni/${json.id}`)).stato).toBe(200);
+  expect(await conta()).toBe(0);
+  expect((await studio()).impegni).toEqual([]);
+});
+
+test("impegno passato: non compare più nella lista", async () => {
+  await impegno(CALCETTO);
+  const dopo = new Date("2026-10-27T10:00:00Z");
+  const r = await chiama("GET", "/api/studio", undefined, COOKIE, E, dopo);
+  expect(r.json.impegni).toEqual([]);
+});
+
+test("impegno non valido", async () => {
+  for (const corpo of [
+    undefined, {}, { ...CALCETTO, titolo: "" }, { ...CALCETTO, titolo: "x".repeat(101) }, { ...CALCETTO, data: "domani" },
+    { ...CALCETTO, ora: "25:00" }, { ...CALCETTO, fine: "14:00" }, { ...CALCETTO, fine: "15:00" }, { ...CALCETTO, data: "2026-10-22" },
+  ]) {
+    const r = await impegno(corpo);
+    expect(r.stato).toBe(400);
+    expect(typeof r.json.errore).toBe("string");
+  }
+  expect((await studio()).impegni).toEqual([]);
+});
+
+test("togliere un impegno: solo quelli dell'app, non quelli del calendario", async () => {
+  await sync({ impegni: [{ id: "x", titolo: "Dal calendario", inizio: "2026-10-27T14:00:00.000Z", fine: "2026-10-27T15:00:00.000Z" }] });
+  expect((await chiama("DELETE", "/api/impegni/x")).stato).toBe(404);
+  expect((await E.DB.prepare("SELECT COUNT(*) AS n FROM impegni").first<{ n: number }>())!.n).toBe(1);
+});
+
+test("gli impegni dell'app richiedono il login", async () => {
+  expect((await chiama("POST", "/api/impegni", CALCETTO, {})).stato).toBe(401);
+});
