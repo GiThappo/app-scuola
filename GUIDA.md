@@ -1,6 +1,6 @@
 # Come installare App Scuola
 
-Questa guida è per chi non ha esperienza con il computer. Non serve il terminale e non devi installare programmi. È gratis e non serve la carta di credito.
+Questa guida è per chi non ha esperienza con il computer. Non serve il terminale e non devi installare programmi. È gratis.
 
 App Scuola è un progetto **non ufficiale**: non è di Classeviva né di Spaggiari. L'app sarà tua: starà nel tuo account e ci entrerai solo tu.
 
