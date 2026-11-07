@@ -38,7 +38,7 @@ const salvaImpostazione = (db: D1Database, chiave: string, v: string | null) =>
   db.prepare("INSERT INTO impostazioni (chiave, valore) VALUES (?, ?) ON CONFLICT(chiave) DO UPDATE SET valore = excluded.valore").bind(chiave, v);
 
 /** Scarica il registro e lo salva in D1. Se qualcosa va storto, i dati di prima restano. */
-export async function aggiorna(env: Env, now: Date, fetchFn: typeof fetch = fetch, { forza = false } = {}): Promise<{ ok: boolean; errore?: string; inCorso?: boolean }> {
+export async function aggiorna(env: Env, now: Date, fetchFn: typeof fetch = fetch, { forza = false } = {}): Promise<{ ok: boolean; errore?: string; inCorso?: boolean; riprova?: boolean }> {
   const db = env.DB;
   const adesso = now.toISOString();
   const oggi = oggiRoma(now);
@@ -144,6 +144,6 @@ export async function aggiorna(env: Env, now: Date, fetchFn: typeof fetch = fetc
       salvaImpostazione(db, "ultimo_tentativo", adesso), salvaImpostazione(db, "ultimo_errore", errore), salvaImpostazione(db, "in_corso", null),
       salvaImpostazione(db, "credenziali_rifiutate", rifiutate ? adesso : null),
     ]);
-    return { ok: false, errore };
+    return rifiutate ? { ok: false, errore } : { ok: false, errore, riprova: true };
   }
 }

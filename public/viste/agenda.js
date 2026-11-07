@@ -1,5 +1,5 @@
 import { api, esc } from "../app.js";
-import { daQuanto, etichettaGiorno, messaggiVuoto } from "../formato.js";
+import { avvisoAggiornamento, daQuanto, etichettaGiorno, messaggiVuoto } from "../formato.js";
 import { oggiDaStudiare } from "./studio.js";
 
 const ETICHETTE = { VERIFICA: "VERIFICA", INTERROGAZIONE: "INTERROGAZIONE", COMPITO: "COMPITO" };
@@ -54,16 +54,17 @@ function primiPassi(stato) {
   return passi.length ? `<section class="voce primi-passi"><div class="corpo"><h2>Per iniziare</h2><ol>${passi.join("")}</ol></div></section>` : "";
 }
 
-export async function vistaAgenda(el) {
+export async function vistaAgenda(el, { appenaProvato = false } = {}) {
   const [stato, agenda, studio] = await Promise.all([api("/api/stato"), api("/api/agenda"), api("/api/studio")]);
   const oggi = stato.oggi;
   const ultimo = stato.ultimo_ok ? `Aggiornato ${daQuanto(stato.ultimo_ok)}` : "Mai aggiornato";
-  const errore = stato.ultimo_errore
+  const avviso = avvisoAggiornamento(stato, new Date(), { appenaProvato });
+  const errore = avviso
     ? `<p class="avviso">Ultimo aggiornamento non riuscito ${esc(daQuanto(stato.ultimo_tentativo))}: ${esc(stato.ultimo_errore)}.
        ${stato.ultimo_ok ? `Stai vedendo i dati dell'ultimo controllo riuscito (${esc(daQuanto(stato.ultimo_ok))}).` : ""}
        ${stato.classeviva === "rifiutata" ? `<a href="#/classeviva">Correggi nome utente e password</a>` : ""}</p>`
     : "";
-  const vuoto = messaggiVuoto(stato);
+  const vuoto = messaggiVuoto(stato, new Date(), { avviso });
   const domaniVuoto = !agenda.per_domani.length && !agenda.promemoria.length
     ? `<section class="per-domani vuota"><h2>Per ${esc(etichettaGiorno(domani(oggi), oggi).replace("Domani · ", ""))}</h2><p class="nota">${esc(vuoto.domani)}</p></section>` : "";
   const giorni = agenda.giorni.length
@@ -132,7 +133,7 @@ export async function vistaAgenda(el) {
     } catch (e) {
       if (e.stato !== 429) throw e;
     }
-    await vistaAgenda(el);
+    await vistaAgenda(el, { appenaProvato: true });
   };
   bottone.addEventListener("click", aggiorna);
   // Con una password rifiutata o senza account non si riprova da soli: solo con il tasto Aggiorna

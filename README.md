@@ -20,6 +20,8 @@ Fa parte di [tutor-scolastico](https://github.com/GiThappo/tutor-scolastico), le
 
 Non serve il terminale. Ti servono un account GitHub e uno Cloudflare, entrambi gratuiti.
 
+**[Apri la guida passo passo, con le schermate](GUIDA.md).** Qui sotto trovi il riassunto.
+
 1. Clicca il pulsante e accedi a Cloudflare.
 2. Se Cloudflare chiede di collegare GitHub, autorizza. Se poi finisci su una pagina generica, torna qui e clicca di nuovo il pulsante.
 3. Scegli il tuo account GitHub e spunta **Create private Git repository**.
@@ -154,7 +156,7 @@ Carica solo i file nuovi o cambiati e toglie dall'app quelli che hai cancellato 
 ## Come si aggiorna
 
 - **Quando apri l'app** scarica il registro, se l'ultimo aggiornamento ha più di un'ora. C'è anche il pulsante **Aggiorna**.
-- **Ogni ora, di giorno** (dalle 7 alle 21 con l'ora legale, dalle 6 alle 20 con quella solare), un cron di Cloudflare prova ad aggiornare anche se non la apri. Classeviva rifiuta alcune zone dei server Cloudflare, quindi il cron passa da un Durable Object in Europa occidentale. Se dovesse fallire comunque, resta l'aggiornamento all'apertura.
+- **Ogni ora, di giorno** (dalle 7 alle 21 con l'ora legale, dalle 6 alle 20 con quella solare), un cron di Cloudflare prova ad aggiornare anche se non la apri. Classeviva non si raggiunge da tutte le zone dei server Cloudflare, quindi il cron passa da un Durable Object in Europa occidentale e, se il sito non risponde, prova l'Europa orientale. Se fallisce comunque, resta l'aggiornamento all'apertura.
 
 ## Sviluppo
 

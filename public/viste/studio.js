@@ -1,5 +1,5 @@
 import { api, esc } from "../app.js";
-import { daQuanto, etichettaGiorno, etichettaBlocco, messaggiVuoto, tonoMateria } from "../formato.js";
+import { avvisoAggiornamento, daQuanto, etichettaGiorno, etichettaBlocco, messaggiVuoto, tonoMateria } from "../formato.js";
 
 const DURATE = [15, 20, 30, 45, 60, 90, 120];
 const adessoRoma = () => new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Rome", dateStyle: "short", timeStyle: "short" }).format(new Date()).replace(" ", "T");
@@ -76,7 +76,7 @@ export async function vistaStudio(el, { appenaEliminato = null } = {}) {
     ? `<div class="avviso"><b>Non ci sta tutto.</b> Sposta qualcosa o anticipa:<ul>${s.non_ci_sta.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div>` : "";
   const giorni = s.giorni.length
     ? s.giorni.map((g) => `<h2>${esc(etichettaGiorno(g.data, s.oggi))}</h2>${g.blocchi.map((b) => blocco(b, adesso, s.oggi)).join("")}`).join("")
-    : `<p class="vuoto">${esc(messaggiVuoto(stato).studio)}</p>`;
+    : `<p class="vuoto">${esc(messaggiVuoto(stato, new Date(), { avviso: avvisoAggiornamento(stato) }).studio)}</p>`;
 
   const eliminati = s.eliminati.length
     ? `<details class="eliminati"><summary>Eliminati (${s.eliminati.length})</summary>${s.eliminati.map((b) => `

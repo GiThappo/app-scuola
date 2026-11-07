@@ -47,7 +47,7 @@ export function daQuanto(iso, now = new Date()) {
  * Testi delle liste vuote. Una lista vuota vuol dire "non c'è niente" solo se il registro è stato controllato:
  * mai scaricato → non lo sappiamo; ultimo aggiornamento fallito → valeva all'ultimo controllo riuscito.
  */
-export function messaggiVuoto({ ultimo_ok, ultimo_errore }, now = new Date()) {
+export function messaggiVuoto({ ultimo_ok, ultimo_errore }, now = new Date(), { avviso = true } = {}) {
   if (!ultimo_ok) {
     const perche = "il registro non è ancora stato scaricato.";
     return {
@@ -56,7 +56,7 @@ export function messaggiVuoto({ ultimo_ok, ultimo_errore }, now = new Date()) {
       studio: `Non so ancora cosa c'è da studiare: ${perche}`,
     };
   }
-  if (ultimo_errore) {
+  if (ultimo_errore && avviso) {
     const allora = `all'ultimo controllo riuscito (${daQuanto(ultimo_ok, now)}), ma potrebbe essere cambiato qualcosa.`;
     return {
       domani: `Niente per domani ${allora}`,
@@ -69,6 +69,15 @@ export function messaggiVuoto({ ultimo_ok, ultimo_errore }, now = new Date()) {
     avanti: "Niente più avanti nei prossimi 30 giorni.",
     studio: "Niente da studiare nei prossimi 14 giorni. Le verifiche e i compiti del registro compaiono qui da soli.",
   };
+}
+
+const ORE_DATI_RECENTI = 6;
+
+/** L'errore si mostra se serve: password da correggere, dati vecchi o mai scaricati, oppure se lo studente ha appena provato ad aggiornare. */
+export function avvisoAggiornamento({ ultimo_errore, ultimo_ok, classeviva }, now = new Date(), { appenaProvato = false } = {}) {
+  if (!ultimo_errore) return false;
+  if (appenaProvato || classeviva !== "ok" || !ultimo_ok) return true;
+  return now.getTime() - Date.parse(ultimo_ok) > ORE_DATI_RECENTI * 3600 * 1000;
 }
 
 export const PREFISSO_TELEFONO = "dal telefono ";

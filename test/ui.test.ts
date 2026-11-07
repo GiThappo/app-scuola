@@ -99,6 +99,26 @@ test("percorsoCaricamento: nomi diversi anche con foto chiamate uguali, e percor
   expect(leggiPercorso(percorsoCaricamento("Storia", "foto.heic", adesso))).toBeNull();
 });
 
+test("avvisoAggiornamento: niente allarmi se i dati sono recenti, a meno che l'errore serva", async () => {
+  const { avvisoAggiornamento } = await import("../public/formato.js");
+  const adesso = new Date("2026-11-06T12:00:00Z");
+  const fa = (ore: number) => new Date(adesso.getTime() - ore * 3600_000).toISOString();
+  const giu = { ultimo_errore: "Classeviva non risponde", classeviva: "ok" };
+  expect(avvisoAggiornamento({ ...giu, ultimo_ok: fa(1) }, adesso)).toBe(false);
+  expect(avvisoAggiornamento({ ...giu, ultimo_ok: fa(7) }, adesso)).toBe(true);
+  expect(avvisoAggiornamento({ ...giu, ultimo_ok: null }, adesso)).toBe(true);
+  expect(avvisoAggiornamento({ ...giu, ultimo_ok: fa(1) }, adesso, { appenaProvato: true })).toBe(true);
+  expect(avvisoAggiornamento({ ...giu, classeviva: "rifiutata", ultimo_ok: fa(1) }, adesso)).toBe(true);
+  expect(avvisoAggiornamento({ ultimo_errore: null, classeviva: "ok", ultimo_ok: fa(30) }, adesso)).toBe(false);
+});
+
+test("messaggiVuoto: con dati recenti un errore passeggero non cambia il testo", async () => {
+  const { messaggiVuoto } = await import("../public/formato.js");
+  const adesso = new Date("2026-11-06T12:00:00Z");
+  const recente = messaggiVuoto({ ultimo_ok: "2026-11-06T11:00:00Z", ultimo_errore: "giù" }, adesso, { avviso: false });
+  expect(recente.domani).toBe("Niente sul registro per domani.");
+});
+
 test("etichettaBlocco", async () => {
   const { etichettaBlocco } = await import("../public/formato.js");
   expect(etichettaBlocco({ tipo: "COMPITO", scadenza: "2026-10-29" }, "2026-10-28")).toEqual({ testo: "PER DOMANI", classe: "DOMANI" });
