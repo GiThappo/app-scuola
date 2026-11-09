@@ -4,6 +4,7 @@ import m0003 from "../migrations/0003_studio.sql";
 import m0004 from "../migrations/0004_origine.sql";
 import m0005 from "../migrations/0005_materiale.sql";
 import m0006 from "../migrations/0006_medie_e_fatti.sql";
+import m0007 from "../migrations/0007_bacheca.sql";
 
 export type Migrazione = { nome: string; sql: string };
 
@@ -15,6 +16,7 @@ export const MIGRAZIONI: Migrazione[] = [
   { nome: "0004_origine.sql", sql: m0004 },
   { nome: "0005_materiale.sql", sql: m0005 },
   { nome: "0006_medie_e_fatti.sql", sql: m0006 },
+  { nome: "0007_bacheca.sql", sql: m0007 },
 ];
 
 const comandi = (sql: string) => sql.replace(/^\s*--.*$/gm, "").split(/;\s*(?:\n|$)/).map((c) => c.trim()).filter(Boolean);

@@ -14,7 +14,7 @@ const MIME: Record<string, string> = {
   png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", webp: "image/webp",
 };
 // Il visore PDF del browser è un plugin: con object-src 'none' non si aprirebbe
-const CSP_FILE = "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; frame-ancestors 'none'";
+export const CSP_FILE = "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; frame-ancestors 'none'";
 
 export type RigaFile = { percorso: string; materia: string; tipo: string; nome: string; mime: string; dimensione: number; sha256: string; caricato_il: string };
 

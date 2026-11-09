@@ -6,6 +6,7 @@ import { leggiCredenziali, salvaCredenziali } from "./registro/credenziali";
 import { aggiungiGiorni, giornoIso, inizioAnnoScolastico, oggiRoma } from "./registro/date";
 import { haMateria, leggiOrarioInviato, parseOrario, propostaOrario, scriviOrario, stessaMateria } from "./registro/orario";
 import { materialeDi, rotteMateriale } from "./materiale/api";
+import { rotteBacheca } from "./registro/bacheca";
 import { rotteStudio } from "./studio/api";
 import { ripianifica } from "./studio/ripianifica";
 import { intestazioniSicurezza } from "./sicurezza";
@@ -218,6 +219,7 @@ export function creaApp({ now = () => new Date(), fetchFn }: Opzioni = {}) {
 
   rotteStudio(app, now);
   rotteMateriale(app, now);
+  rotteBacheca(app, fetchFn);
 
   app.get("/api/materie", async (c) => {
     const db = c.env.DB;

@@ -36,6 +36,8 @@ export type DatiRegistro = {
   didattica: any[];
   /** medie per materia calcolate da Classeviva; null se non sono arrivate */
   medie: { subjectAverages: Record<string, any> } | null;
+  /** circolari della bacheca; null se non sono arrivate */
+  bacheca: any[] | null;
 };
 
 const ymd = (d: string) => d.replaceAll("-", "");
@@ -103,5 +105,29 @@ export async function scaricaRegistro(
     .then(async (r) => (r.ok ? ((await r.json()) as any) : null))
     .then((j) => (j?.subjectAverages && typeof j.subjectAverages === "object" ? j : null))
     .catch(() => null);
-  return { voti, materie, periodi, agenda, lezioni, calendario, didattica, medie };
+  // Senza bacheca il resto del registro serve lo stesso
+  const bacheca = await get(`${s}/noticeboard`, "items").catch(() => null);
+  return { voti, materie, periodi, agenda, lezioni, calendario, didattica, medie, bacheca };
+}
+
+/** Scarica un allegato della bacheca. Classeviva lo dà solo dopo la lettura, quindi la circolare risulta letta dallo studente. */
+export async function scaricaAllegato(
+  utente: string,
+  password: string,
+  codice: string,
+  id: number,
+  numero: number,
+  fetchFn: typeof fetch = fetch,
+): Promise<ArrayBuffer> {
+  const cookie = await accedi(utente, password, fetchFn);
+  const intestazioni = { ...INTESTAZIONI, Cookie: cookie };
+  const whoami = await fetchFn(`${REST}/misc/whoami`, { headers: intestazioni });
+  if (!whoami.ok) throw new ErroreClasseviva(`Classeviva non ha dato i dati (whoami, HTTP ${whoami.status})`, "dati", whoami.status);
+  const base = `${REST}/students/${((await whoami.json()) as any).id}/noticeboard`;
+  const c = encodeURIComponent(codice);
+  const lettura = await fetchFn(`${base}/readmulti/${c}/${id}/101`, { method: "POST", headers: intestazioni });
+  if (!lettura.ok) throw new ErroreClasseviva(`Classeviva non ha aperto la circolare (HTTP ${lettura.status})`, "dati", lettura.status);
+  const allegato = await fetchFn(`${base}/attach/${c}/${id}/${numero}`, { headers: intestazioni });
+  if (!allegato.ok) throw new ErroreClasseviva(`Classeviva non ha dato l'allegato (HTTP ${allegato.status})`, "dati", allegato.status);
+  return allegato.arrayBuffer();
 }

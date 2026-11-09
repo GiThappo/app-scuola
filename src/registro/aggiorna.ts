@@ -4,6 +4,7 @@ import { classificaTipo, materieVoce, scadenza } from "./agenda";
 import { aggiungiGiorni, oggiRoma } from "./date";
 import { nomeBreve, parseOrario } from "./orario";
 import { blu, valore } from "./voti";
+import { istruzioniBacheca } from "./bacheca";
 import { ripianifica } from "../studio/ripianifica";
 
 export type Env = {
@@ -130,6 +131,8 @@ export async function aggiorna(env: Env, now: Date, fetchFn: typeof fetch = fetc
     for (const p of dati.periodi) {
       s.push(db.prepare("INSERT INTO periodi (pos, nome, inizio, fine) VALUES (?, ?, ?, ?)").bind(p.periodPos, p.periodLabel, p.dateStart, p.dateEnd));
     }
+
+    if (dati.bacheca) s.push(...istruzioniBacheca(db, dati.bacheca, adesso));
 
     s.push(salvaImpostazione(db, "ultimo_ok", adesso), salvaImpostazione(db, "ultimo_tentativo", adesso), salvaImpostazione(db, "ultimo_errore", null), salvaImpostazione(db, "credenziali_rifiutate", null), salvaImpostazione(db, "in_corso", null));
     await db.batch(s);

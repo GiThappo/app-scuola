@@ -130,6 +130,30 @@ for (const [i, { data, completo }] of recap.entries()) {
   if (await azione(`↑ recap ${data}`, () => chiama("PUT", `/api/recap/${data}`, readFileSync(completo, "utf8")))) fatto.recap++;
 }
 
+// Riassunti delle circolari: l'app deve già conoscere la circolare, e una versione vecchia dell'app non ha la bacheca
+const fileRiassunti = join(cartella, "bacheca", "riassunti.json");
+if (existsSync(fileRiassunti)) {
+  const risposta = await fetch(`${appUrl}/api/bacheca`, { headers: { Cookie: cookie } });
+  if (risposta.status === 404) {
+    console.log("\nBacheca: questa versione dell'app non ce l'ha ancora, riassunti non caricati.");
+  } else if (!risposta.ok) {
+    console.error(`GET /api/bacheca: ${risposta.status}`);
+    fatto.errori++;
+  } else {
+    const locali = JSON.parse(readFileSync(fileRiassunti, "utf8"));
+    const online = new Map((await risposta.json()).voci.map((v) => [String(v.id), v]));
+    const conta = { caricati: 0, attesa: 0 };
+    for (const [id, r] of Object.entries(locali)) {
+      const voce = online.get(id);
+      if (!voce) { conta.attesa++; continue; }
+      if (["riguarda", "destinatari", "riassunto", "da_fare"].every((k) => (voce[k] ?? "") === (r[k] ?? ""))) continue;
+      const corpo = JSON.stringify({ riguarda: r.riguarda, destinatari: r.destinatari, riassunto: r.riassunto, da_fare: r.da_fare, vista: !!r.era_letta });
+      if (await azione(`↑ circolare ${id}`, () => chiama("PUT", `/api/bacheca/${encodeURIComponent(id)}/riassunto`, corpo))) conta.caricati++;
+    }
+    console.log(`\nBacheca: ${conta.caricati} riassunti caricati, ${conta.attesa} in attesa che l'app scarichi la circolare.`);
+  }
+}
+
 console.log(`\nMateriale: ${fatto.caricati} caricati, ${fatto.uguali} già aggiornati, ${fatto.tolti} tolti. Recap caricati: ${fatto.recap}.` +
   (fatto.errori ? ` Errori: ${fatto.errori}.` : ""));
 process.exit(fatto.errori ? 1 : 0);

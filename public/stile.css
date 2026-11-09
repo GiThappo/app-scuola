@@ -259,3 +259,15 @@ a.bottone { display: inline-flex; align-items: center; justify-content: center; 
 .impegno { align-items: center; }
 .impegno .bottone { flex: none; }
 .testa .azioni .bottone { white-space: nowrap; }
+
+/* Bacheca */
+.circolare.da-vedere { border-left: 4px solid var(--accento); }
+.circolare.spenta { opacity: .6; }
+.circolare .riassunto { margin-top: 6px; }
+.circolare .da-fare { margin-top: 6px; font-weight: 600; }
+.circolare .azioni { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 6px; }
+.circolare .apri { color: var(--accento); font-size: 14px; }
+.tag.RIGUARDA-si { background: var(--ok); color: #000; }
+.tag.RIGUARDA-forse, .tag.ATTESA { background: var(--medio); color: #000; }
+.tag.RIGUARDA-no { background: #64748b; }
+.circolare .tag { display: inline-block; white-space: normal; }
