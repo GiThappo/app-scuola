@@ -1,4 +1,5 @@
-import { api, esc } from "../app.js";
+import { api, esc, NonLoggato } from "../app.js";
+import { corpoArgomento, rigaArgomento } from "../argomenti.js";
 import { classeMedia, etichettaGiorno, percorsoCaricamento, PREFISSO_TELEFONO } from "../formato.js";
 import { dentroApp, titoloFile, urlFile } from "./file.js";
 
@@ -49,6 +50,9 @@ export async function vistaMateria(el, nome) {
           <div class="${l.argomento ? "" : "nota"}">${esc(l.argomento || "argomento non scritto")}</div></div></div>`).join("")
     : `<p class="vuoto">Nessuna lezione nelle ultime settimane.</p>`;
 
+  const argomenti = m.materiale.argomenti?.length
+    ? `<h2>Argomenti</h2><div class="lista argomenti">${m.materiale.argomenti.map((a, i) => rigaArgomento(a, i, i === 0)).join("")}</div>`
+    : "";
   const materiale = SEZIONI.filter(([k]) => m.materiale[k].length)
     .map(([k, titolo]) => `<h2>${titolo}</h2><div class="lista">${m.materiale[k].map(voceFile).join("")}</div>`).join("");
 
@@ -58,7 +62,7 @@ export async function vistaMateria(el, nome) {
       <span class="media ${classeMedia(m.media)}">media ${m.media == null ? "—" : m.media.toFixed(2).replace(".", ",")}</span>
     </div>
     <div class="sotto">${m.media_classeviva ? "Media di Classeviva" : "Media calcolata dall'app"}${m.voti.some((v) => v.blu) ? " · i voti blu non fanno media" : ""}</div>
-    <h2>Voti</h2>${voti}${inArrivo}${materiale}
+    <h2>Voti</h2>${voti}${inArrivo}${argomenti}${materiale}
     <div class="carica-appunti">
       <label class="bottone">＋ Aggiungi appunti<input type="file" id="carica" accept=".pdf,.txt,.md,image/jpeg,image/png,image/webp"></label>
       <p class="errore" role="alert"></p>
@@ -84,6 +88,40 @@ export async function vistaMateria(el, nome) {
       errore.textContent = err.stato === 400 ? "Questo tipo di file non si può caricare: usa una foto JPG o PNG, un PDF o un testo." : err.message;
     }
   });
+  // Argomenti: il riassunto si scarica alla prima apertura (il più recente subito).
+  // Un errore resta nella riga: il resto della pagina funziona lo stesso.
+  const riassunti = new Map();
+  async function riempi(i) {
+    const a = m.materiale.argomenti[i];
+    const corpo = el.querySelector(`[data-argomento="${i}"]`).nextElementSibling;
+    try {
+      if (!riassunti.has(i)) {
+        let testo = null;
+        if (a.riassunto) {
+          const r = await fetch(urlFile(a.riassunto), { credentials: "same-origin" });
+          if (r.status === 401) throw new NonLoggato();
+          if (!r.ok) throw new Error(`Errore ${r.status}`);
+          testo = await r.text();
+        }
+        riassunti.set(i, testo);
+      }
+      corpo.innerHTML = corpoArgomento(a, riassunti.get(i));
+    } catch (err) {
+      if (err instanceof NonLoggato) dispatchEvent(new HashChangeEvent("hashchange")); // il router mostra il login
+      else corpo.innerHTML = corpoArgomento(a, null, { errore: true });
+    }
+  }
+  for (const b of el.querySelectorAll("[data-argomento]")) {
+    b.addEventListener("click", () => {
+      const aperto = b.getAttribute("aria-expanded") !== "true";
+      b.setAttribute("aria-expanded", String(aperto));
+      b.parentElement.classList.toggle("aperto", aperto);
+      b.nextElementSibling.hidden = !aperto;
+      if (aperto) riempi(Number(b.dataset.argomento));
+    });
+  }
+  if (m.materiale.argomenti?.length) riempi(0);
+
   // Elimina in due tocchi: niente finestre di conferma del browser
   for (const b of el.querySelectorAll("[data-elimina]")) {
     b.addEventListener("click", async () => {

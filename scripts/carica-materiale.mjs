@@ -6,6 +6,8 @@
 //
 // Dalla cartella prende:
 //   materiale/<Materia>/{schede,fonti,appunti}/*  (pdf, md, txt, png, jpg, webp) → in Materie, nella pagina della materia
+//   materiale/<Materia>/argomenti/N. Titolo.{pdf,md}  → sezione Argomenti (PDF + super riassunto)
+//                                                    le cartelle nascoste (es. .sorgenti/) non si caricano
 //   report/AAAA-MM-GG.txt                         → nella scheda Recap
 // Carica solo i file nuovi o cambiati e toglie dall'app quelli che non ci sono più sul PC.
 //
@@ -19,7 +21,7 @@ import { basename, dirname, join } from "node:path";
 import { createInterface } from "node:readline/promises";
 import { fileURLToPath } from "node:url";
 
-const TIPI = ["schede", "fonti", "appunti"];
+const TIPI = ["schede", "fonti", "appunti", "argomenti"];
 const ESTENSIONI = /\.(pdf|md|txt|png|jpe?g|webp)$/i;
 const RECAP_DA_RICARICARE = 3; // gli ultimi report si riscrivono durante la giornata
 

@@ -126,3 +126,25 @@ test("etichettaBlocco", async () => {
   expect(etichettaBlocco({ tipo: "TUO", scadenza: null }, "2026-10-28")).toEqual({ testo: "TUO", classe: "TUO" });
   expect(etichettaBlocco({ tipo: "INTERROGAZIONE", scadenza: "2026-10-30" }, "2026-10-28").testo).toBe("INTERROG.");
 });
+
+test("argomenti", async () => {
+  const { rigaArgomento, corpoArgomento } = await import("../public/argomenti.js");
+  const a = { numero: 3, titolo: "Dante <vita>", pdf: "Italiano/argomenti/3. Dante.pdf", riassunto: "Italiano/argomenti/3. Dante.md" };
+  expect(rigaArgomento(a, 0, false)).toContain("Dante &lt;vita&gt;");
+  expect(rigaArgomento(a, 0, false)).toContain('aria-expanded="false"');
+  expect(rigaArgomento(a, 0, true)).toContain('aria-expanded="true"');
+  const c = corpoArgomento(a, "**Dante nasce a Firenze**<script>");
+  expect(c).toContain("<strong>Dante nasce a Firenze</strong>&lt;script&gt;");
+  expect(c).toContain('href="/api/file/Italiano/argomenti/3.%20Dante.pdf"');
+  expect(corpoArgomento({ ...a, pdf: null }, "x")).not.toContain("Apri il PDF");
+  expect(corpoArgomento({ ...a, riassunto: null }, null)).toContain("Apri il PDF");
+});
+
+test("argomenti: riassunto che non si scarica", async () => {
+  const { corpoArgomento } = await import("../public/argomenti.js");
+  const a = { numero: 1, titolo: "X", pdf: "M/argomenti/1. X.pdf", riassunto: "M/argomenti/1. X.md" };
+  const c = corpoArgomento(a, null, { errore: true });
+  expect(c).toContain("Il riassunto non si è caricato");
+  expect(c).toContain("Apri il PDF");
+  expect(corpoArgomento(a, "ok")).not.toContain("non si è caricato");
+});

@@ -88,6 +88,29 @@ test("la materia mostra il suo materiale, anche se la cartella ha maiuscole dive
   expect(storia.materiale.fonti[0].nome).toBe("a.pdf");
 });
 
+test("gli argomenti si raggruppano per numero, dal più recente", async () => {
+  for (const n of ["1. Medioevo.pdf", "1. Medioevo.md", "2. Stilnovo.md", "10. Dante, la vita.pdf", "10. Dante, la vita.md", "Senza numero.pdf"])
+    expect((await chiama("PUT", url(`Storia e arte/argomenti/${n}`), "x")).status).toBe(201);
+  const m = (await (await chiama("GET", `/api/materie/${encodeURIComponent("Storia e Arte")}`)).json()) as any;
+  expect(m.materiale.argomenti).toEqual([
+    { numero: 10, titolo: "Dante, la vita", pdf: "Storia e arte/argomenti/10. Dante, la vita.pdf", riassunto: "Storia e arte/argomenti/10. Dante, la vita.md" },
+    { numero: 2, titolo: "Stilnovo", pdf: null, riassunto: "Storia e arte/argomenti/2. Stilnovo.md" },
+    { numero: 1, titolo: "Medioevo", pdf: "Storia e arte/argomenti/1. Medioevo.pdf", riassunto: "Storia e arte/argomenti/1. Medioevo.md" },
+    { numero: null, titolo: "Senza numero", pdf: "Storia e arte/argomenti/Senza numero.pdf", riassunto: null },
+  ]);
+});
+
+test("in argomenti si accettano solo pdf e md", async () => {
+  expect((await chiama("PUT", url("Storia/argomenti/1. A.png"), "x")).status).toBe(400);
+  expect((await chiama("PUT", url("Storia/argomenti/1. A.txt"), "x")).status).toBe(400);
+});
+
+test("una materia con soli argomenti compare in Materie", async () => {
+  await chiama("PUT", url("Fisica/argomenti/1. Moto.pdf"), "x");
+  const elenco = (await (await chiama("GET", "/api/materie")).json()) as any[];
+  expect(elenco.map((x) => x.nome)).toContain("Fisica");
+});
+
 test("recap: carica, elenca dal più recente, leggi", async () => {
   expect((await chiama("PUT", "/api/recap/2026-10-23", "REPORT DEL VENERDÌ")).status).toBe(201);
   await chiama("PUT", "/api/recap/2026-10-24", "REPORT DEL SABATO");

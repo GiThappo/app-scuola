@@ -3,12 +3,14 @@ import type { Env } from "../registro/aggiorna";
 import { stessaMateria } from "../registro/orario";
 import { oggiRoma } from "../registro/date";
 import { recapAutomatico } from "../registro/recap";
+import { raggruppaArgomenti } from "./argomenti";
 
 const PEZZO = 1_000_000; // byte: in D1 una riga non può superare 2 MB
 const MAX_FILE = 25_000_000;
 const MAX_RECAP = 200_000;
 const DATA = /^\d{4}-\d{2}-\d{2}$/;
-export const TIPI = ["schede", "fonti", "appunti"] as const;
+export const TIPI = ["schede", "fonti", "appunti", "argomenti"] as const;
+const SOLO_ARGOMENTI = new Set(["pdf", "md"]);
 const MIME: Record<string, string> = {
   pdf: "application/pdf", md: "text/markdown; charset=utf-8", txt: "text/plain; charset=utf-8",
   png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", webp: "image/webp",
@@ -18,7 +20,7 @@ export const CSP_FILE = "default-src 'none'; img-src 'self'; style-src 'unsafe-i
 
 export type RigaFile = { percorso: string; materia: string; tipo: string; nome: string; mime: string; dimensione: number; sha256: string; caricato_il: string };
 
-/** "<Materia>/<schede|fonti|appunti>/<nome.estensione>" → parti, oppure null se non è ammesso. */
+/** "<Materia>/<schede|fonti|appunti|argomenti>/<nome.estensione>" (in argomenti solo pdf e md) → parti, oppure null se non è ammesso. */
 export function leggiPercorso(percorso: string) {
   const parti = percorso.split("/");
   if (parti.length !== 3) return null;
@@ -26,6 +28,7 @@ export function leggiPercorso(percorso: string) {
   const est = nome.match(/.\.([a-z0-9]+)$/i)?.[1].toLowerCase();
   if (!materia || materia.length > 60 || materia.startsWith(".") || !(TIPI as readonly string[]).includes(tipo)) return null;
   if (nome.length > 200 || nome.startsWith(".") || !est || !MIME[est]) return null;
+  if (tipo === "argomenti" && !SOLO_ARGOMENTI.has(est)) return null;
   return { materia, tipo, nome, mime: MIME[est] };
 }
 
@@ -35,8 +38,9 @@ export async function materialeDi(db: D1Database, materia: string) {
   const righe = (await db.prepare("SELECT * FROM file").all<RigaFile>()).results
     .filter((f) => stessaMateria(f.materia, materia))
     .sort((a, b) => a.nome.localeCompare(b.nome, "it", { numeric: true }));
-  return Object.fromEntries(TIPI.map((t) => [t, righe.filter((f) => f.tipo === t)
+  const perTipo = Object.fromEntries((["schede", "fonti", "appunti"] as const).map((t) => [t, righe.filter((f) => f.tipo === t)
     .map(({ percorso, nome, mime, dimensione, caricato_il }) => ({ percorso, nome, mime, dimensione, caricato_il }))]));
+  return { ...perTipo, argomenti: raggruppaArgomenti(righe.filter((f) => f.tipo === "argomenti")) };
 }
 
 export function rotteMateriale(app: Hono<{ Bindings: Env }>, now: () => Date) {
@@ -45,7 +49,7 @@ export function rotteMateriale(app: Hono<{ Bindings: Env }>, now: () => Date) {
   app.put("/api/file/:p{.+}", async (c) => {
     const percorso = c.req.param("p");
     const p = leggiPercorso(percorso);
-    if (!p) return c.json({ errore: "Percorso non ammesso: <Materia>/<schede|fonti|appunti>/<nome> (pdf, md, txt, png, jpg, webp)" }, 400);
+    if (!p) return c.json({ errore: "Percorso non ammesso: <Materia>/<schede|fonti|appunti|argomenti>/<nome> (pdf, md, txt, png, jpg, webp; in argomenti solo pdf e md)" }, 400);
     const dati = await c.req.arrayBuffer();
     if (dati.byteLength > MAX_FILE) return c.json({ errore: "File troppo grande (max 25 MB)" }, 413);
     const sha256 = esadecimale(await crypto.subtle.digest("SHA-256", dati));

@@ -271,3 +271,14 @@ a.bottone { display: inline-flex; align-items: center; justify-content: center; 
 .tag.RIGUARDA-forse, .tag.ATTESA { background: var(--medio); color: #000; }
 .tag.RIGUARDA-no { background: #64748b; }
 .circolare .tag { display: inline-block; white-space: normal; }
+
+/* Argomenti: riga che si apre con il super riassunto e il PDF */
+.argomento-riga { width: 100%; text-align: left; font: inherit; color: inherit; cursor: pointer; align-items: center; }
+.argomento-riga .corpo { font-weight: 500; }
+.argomento-riga .freccia { color: var(--tenue); font-size: 20px; transition: transform .15s; }
+.argomento.aperto { background: var(--carta); border: 1px solid var(--bordo); border-radius: 14px; box-shadow: var(--ombra); margin-bottom: 8px; }
+.argomento.aperto .argomento-riga { margin: 0; border: none; box-shadow: none; background: transparent; }
+.argomento.aperto .freccia { transform: rotate(90deg); }
+.argomento-corpo { padding: 0 12px 12px; }
+.argomento-corpo .riassunto { border: none; padding: 0 4px; margin-top: 4px; }
+.argomento-corpo .bottone { margin-top: 10px; width: 100%; }
